@@ -1,0 +1,2 @@
+const getBoxShadow = ({colour = 'black', x = '0px', y = '6px', blur = '12px', spread = '-3px', inset = false} = {}) => `box-shadow: ${inset ? 'inset ' : ''}${x} ${y} ${blur} ${spread} ${colour};`;
+export default getBoxShadow;
