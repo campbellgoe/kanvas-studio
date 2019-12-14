@@ -7,22 +7,24 @@
     "start": "cross-env NODE_ENV=production node server.js"
   },
   "dependencies": {
+    "@toolia/use-event-listener": "1.0.1",
     "body-parser": "^1.19.0",
     "device": "^0.3.9",
     "dotenv": "^8.1.0",
     "express": "^4.14.0",
     "helmet": "^3.21.2",
     "next": "latest",
+    "prop-types": "^15.7.2",
     "rate-limiter-flexible": "^1.1.6",
     "react": "^16.7.0",
     "react-dom": "^16.7.0",
     "react-use": "^12.2.2",
-    "styled-components": "^4.0.0",
-    "uuid": "^3.3.3"
+    "ssr-window": "^1.0.1",
+    "styled-components": "^4.0.0"
   },
   "devDependencies": {
     "babel-plugin-styled-components": "^1.8.0",
+    "babel-plugin-transform-define": "^2.0.0",
     "cross-env": "^5.2.0"
-  },
-  "license": "None"
+  }
 }

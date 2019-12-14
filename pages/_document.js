@@ -7,6 +7,9 @@ import globalStyles from "../globalStyles";
 
 const GlobalStyles = createGlobalStyle`${globalStyles}`;
 
+// const PolyfillScript = ({ deviceType }) => {
+//   return <script>{`alert('${deviceType}');`}</script>;
+// };
 export default class MyDocument extends Document {
   static async getInitialProps(ctx) {
     const sheet = new ServerStyleSheet();
