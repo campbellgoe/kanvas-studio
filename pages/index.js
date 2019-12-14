@@ -2,7 +2,32 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import styled from "styled-components";
 import { ToastContainer } from "../components/ToastNotifications";
 import { window } from 'ssr-window';
-import useEventListener from '@toolia/use-event-listener';
+//import useEventListener from '@toolia/use-event-listener';
+import { throttle } from 'throttle-debounce';
+
+const useEventListener = (target, eventName, eventHandler, {initialiseOnAttach = false, logAttachChange = false } = {}, listenerOpts) => {
+  const [listening, setListening] = useState(true);
+
+  const memoizedCallback = useCallback(eventHandler,
+    [eventHandler],
+  );
+  
+  useEffect(()=>{
+    if(listening){
+      if(logAttachChange) console.warn('Adding event listener. Event:', event);
+      target.addEventListener(eventName, memoizedCallback, listenerOpts);
+      if(initialiseOnAttach) {
+        const eventObject = new Event(eventName);
+        target.dispatchEvent(eventObject);
+      }
+    }
+    return () => {
+      if(logAttachChange) console.warn('Removing event listener. Event:', event);
+      target.removeEventListener(eventName, memoizedCallback, listenerOpts);
+    }
+  }, [listening, initialiseOnAttach, logAttachChange]);
+  return setListening;
+}
 //import { useLocalStorage } from "react-use";
 //import React, { useState, useEffect, useRef } from "react";
 //import styled, { withTheme } from "styled-components";
@@ -21,14 +46,22 @@ const origin = {
 const initialSize = { width: 300, height: 150 };
 const Grid = ({ className = ""}) => {
   className += " Grid";
+  const [{ width, height}, setSize] = useState(initialSize);
   const elGrid = useRef(null);
-  const [size, setListenToSize] = useEventListener(window, 'resize', () => {
-    return {
-      width: window.innerWidth,
-      height: window.innerHeight
+  const throttledGetWindowSize = useCallback(throttle(300, e => {
+    const target = e.target;
+    console.log('resizing with', target.innerWidth);
+    setSize({
+      width: target.innerWidth,
+      height: target.innerHeight
+    });
+  }), [ throttle ]);
+  const setListenToSize = useEventListener(window, 'resize', throttledGetWindowSize,
+    {
+      initialiseOnAttach: true,
+      logAttachChange: true
     }
-  }, true);
-  const { width, height } = size || initialSize;
+  );
   
   return (
     <div className={className} ref={elGrid}>
@@ -45,16 +78,16 @@ const Canvas = styled(({ className = "", width = 300, height = 150 }) => {
   const elCanvas = useRef(null);
   const [ctx, setCtx] = useState(null);
   useEffect(()=>{
-    setCtx(elCanvas.current.getContext("2d"));
-    console.log('set ctx');
-  }, elCanvas.current)
+    console.log('setting ctx');
+    const canvas = elCanvas.current;
+    setCtx(canvas.getContext("2d"));
+  }, []);
   useEffect(() => {
     console.log("setting canvas size", width, height);
     //on Canvas mount, get canvas context, set canvas width and height, and make first paint.
     const canvas = elCanvas.current;
     canvas.width = width;
     canvas.height = height;
-    
   }, [width, height]);
   useEffect(() => {
     console.log("on render, ctx:", ctx);
