@@ -6,7 +6,7 @@ import { ToastContainer } from "../components/ToastNotifications";
 import { window } from "ssr-window";
 //import useEventListener from '@toolia/use-event-listener';
 import { throttle } from "throttle-debounce";
-
+import safelyCallAndSetState from '../utils/safelyCallAndSetState.js';
 //import { useLocalStorage } from "react-use";
 //import React, { useState, useEffect, useRef } from "react";
 //import styled, { withTheme } from "styled-components";
@@ -147,16 +147,7 @@ type CanvasProps = {
   drawFn: function,
   frame: number,
 };
-// This is used to safely call setupFn and pipe setupFn data into setupData in the Canvas component state.
-// If args are all truthy, call fn with args and if it returns truthy data, call the setFn with that data.
-function safelyCallAndSetState(callFn: function, setFn: function, ...args){
-  if(args.filter(arg => arg).length){
-    const callFnData = callFn(...args);
-    if(callFnData){
-      setFn(callFnData);
-    }
-  }
-}
+
 const Canvas = styled(
   ({
     className = "",
@@ -199,7 +190,7 @@ const Canvas = styled(
       if (canvas && (canvas.width !== width || canvas.height !== height)) {
         canvas.width = width;
         canvas.height = height;
-        //because setting width/height clears the canvas, setupFn again
+        //because setting width/height clears the canvas, calling setupFn again
         safelyCallAndSetState(setupFn, setSetupData, ctx, draw);
       }
     }, [width, height, ctx, draw, setupFn]);
