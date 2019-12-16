@@ -50,10 +50,10 @@ const useEventListener = (
 };
 
 const initialSize = { width: 300, height: 150 };
-const Grid = ({ className = "" }) => {
-  className += " Grid";
+const Orchestrator = ({ className = "" }) => {
+  className += " Orchestrator";
   const [{ width, height }, setSize] = useState(initialSize);
-  const elGrid = useRef(null);
+  const elOrchestrator = useRef(null);
   const throttledGetWindowSize = useCallback(
     throttle(300, e => {
       const target = e.target;
@@ -75,9 +75,9 @@ const Grid = ({ className = "" }) => {
   );
 
   return (
-    <div className={className} ref={elGrid}>
+    <div className={className} ref={elOrchestrator}>
       <Canvas
-        className="GridCanvas"
+        className="OrchestratorCanvas"
         width={width}
         height={height}
         setup={ctx => {
@@ -122,17 +122,17 @@ const Canvas = styled(
         const context = canvas.getContext("2d");
         setCtx(context);
       }
-    }, [elCanvas.current]);
+    }, []);
     useEffect(()=>{
       if(ctx) setup(ctx);
     }, [ctx, setup])
     useEffect(() => {
-      //on Canvas mount, get canvas context, set canvas width and height, and make first paint.
       const canvas = elCanvas.current;
       if (canvas && (canvas.width !== width || canvas.height !== height)) {
         canvas.width = width;
         canvas.height = height;
         if(ctx){
+          //because setting width/height clears the canvas, setup again
           setup(ctx);
         }
       }
@@ -140,7 +140,7 @@ const Canvas = styled(
       if (ctx) {
         draw(ctx);
       }
-    }, [width, height, ctx, draw]);
+    }, [width, height, ctx, setup, draw]);
     return <canvas className={className} ref={elCanvas} />;
   }
 )`
