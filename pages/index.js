@@ -58,10 +58,25 @@ class Drawer {
     ctx.moveTo(xStart,yStart);
     ctx.lineTo(xEnd,yEnd);
   }
-  grid(x: number, y: number, width: number, height: number, cellSize: number){
+  //sx, sy = start x, y.
+  //ex, ey = end x, y.
+  //cellSize is distance between lines
+  //grid will automatically fill the area given by sx,sy,ex,ey with gridlines of cellSize apart.
+  grid(sx: number, sy: number, ex: number, ey: number, cellSize: number){
     const ctx = this.ctx;
+    const width = ex-sx;
+    const height = ey-sy;
+    const xLines = width/cellSize;
+    const yLines = height/cellSize;
     ctx.beginPath();
-    this.line(x, y, width, height);
+    for(let ix = 0; ix < xLines; ix ++){
+      const x = sx+ix*cellSize;
+      this.line(x, sy, x, ey);
+    }
+    for(let iy = 0; iy < yLines; iy ++){
+      const y = sy+iy*cellSize;
+      this.line(sx, y, ex, y);
+    }
     ctx.stroke();
     ctx.closePath();
   }
@@ -105,18 +120,11 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
         width={width}
         height={height}
         setupFn={(ctx, draw) => {
-          ctx.strokeStyle = "blue";
+          ctx.strokeStyle = "rgba(0,0,0,0.1)";
         }}
-        drawFn={(ctx, draw) => {
-          ctx.clearRect(0,0,width/2,height);
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.lineTo(width / 2, height / 2);
-          ctx.stroke();
-          ctx.closePath();
-          const ox = Math.random()*width/4;
-          const oy = Math.random()*height/4;
-          draw.grid(ox, oy, ox+width, oy+height);
+        drawFn={(ctx, draw, frame) => {
+          ctx.clearRect(0,0,width,height);
+          draw.grid(0, 0, width, height, Math.min(width, height)/20);
         }}
         frame={frame}
       />
