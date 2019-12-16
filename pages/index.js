@@ -53,13 +53,17 @@ class Drawer {
   constructor(ctx){
     this.ctx = ctx;
   }
+  line(xStart:number, yStart:number, xEnd: number, yEnd: number){
+    const ctx = this.ctx;
+    ctx.moveTo(xStart,yStart);
+    ctx.lineTo(xEnd,yEnd);
+  }
   grid(x: number, y: number, width: number, height: number, cellSize: number){
     const ctx = this.ctx;
     ctx.beginPath();
-    ctx.moveTo(10,25);
-    ctx.lineTo(x,100);
-    ctx.closePath();
+    this.line(x, y, width, height);
     ctx.stroke();
+    ctx.closePath();
   }
 }
 
@@ -104,12 +108,15 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
           ctx.strokeStyle = "blue";
         }}
         drawFn={(ctx, draw) => {
+          ctx.clearRect(0,0,width/2,height);
           ctx.beginPath();
           ctx.moveTo(0, 0);
           ctx.lineTo(width / 2, height / 2);
           ctx.stroke();
           ctx.closePath();
-          draw.grid(Math.random()*width, height);
+          const ox = Math.random()*width/4;
+          const oy = Math.random()*height/4;
+          draw.grid(ox, oy, ox+width, oy+height);
         }}
         frame={frame}
       />
