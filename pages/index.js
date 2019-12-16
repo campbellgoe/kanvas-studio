@@ -57,7 +57,7 @@ class Drawer {
     const ctx = this.ctx;
     ctx.beginPath();
     ctx.moveTo(10,25);
-    ctx.lineTo(100,100);
+    ctx.lineTo(x,100);
     ctx.closePath();
     ctx.stroke();
   }
@@ -68,6 +68,7 @@ const initialSize = { width: 300, height: 150 };
 const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   className += " Orchestrator";
   const [{ width, height }, setSize] = useState(initialSize);
+  const [frame, setFrame] = useState(0);
   const elOrchestrator = useRef(null);
   const throttledGetWindowSize = useCallback(
     throttle(resizeThrottleDelay, e => {
@@ -88,7 +89,11 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
       logAttachChange: true
     }
   );
-  
+  useEffect(()=>{
+    setTimeout(()=>{
+      setFrame(frame+1)
+    }, 30);
+  }, [frame]);
   return (
     <div className={className} ref={elOrchestrator}>
       <Canvas
@@ -104,8 +109,9 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
           ctx.lineTo(width / 2, height / 2);
           ctx.stroke();
           ctx.closePath();
-          draw.grid(width, height);
+          draw.grid(Math.random()*width, height);
         }}
+        frame={frame}
       />
       <p>width: {width}</p>
       <p>height: {height}</p>
@@ -119,7 +125,8 @@ type CanvasProps = {
   width: number,
   height: number,
   setupFn: function,
-  drawFn: function
+  drawFn: function,
+  frame: number,
 };
 const Canvas = styled(
   ({
@@ -127,7 +134,8 @@ const Canvas = styled(
     width = 300,
     height = 150,
     setupFn = Function.prototype,
-    drawFn = Function.prototype
+    drawFn = Function.prototype,
+    frame = 0
   }: CanvasProps) => {
     className += " Canvas";
     const elCanvas = useRef(null);
@@ -150,7 +158,7 @@ const Canvas = styled(
         setDraw(draw);
       }
     }, []);
-    //initial setup fn called, used if canvas isn't resized before drawFn is called.
+    //initial setup fn called, useful if canvas isn't resized before drawFn is called.
     useEffect(()=>{
       if(ctx && draw){
         setupFn(ctx, draw);
@@ -162,16 +170,15 @@ const Canvas = styled(
       if (canvas && (canvas.width !== width || canvas.height !== height)) {
         canvas.width = width;
         canvas.height = height;
-        if(ctx){
+        if(ctx && draw){
           //because setting width/height clears the canvas, setupFn again
           setupFn(ctx, draw);
         }
       }
-        
-      if (ctx) {
-        drawFn(ctx, draw);
-      }
-    }, [width, height, ctx, draw, setupFn, drawFn]);
+    }, [width, height, ctx, draw, setupFn]);
+    useEffect(()=>{
+      if(ctx && draw && frame) drawFn(ctx, draw, frame);
+    }, [ctx, draw, drawFn, frame]);
     return <canvas className={className} ref={elCanvas} />;
   }
 )`
