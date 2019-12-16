@@ -59,7 +59,7 @@ function serverLogic({ app, rateLimiter }) {
   server.use(bodyParser.json());
 
   //rate limit all routes to help protect against DDOS
-  server.use(rateLimiter(false));
+  if(rateLimiter) server.use(rateLimiter(false));
 
   //handle contact form
   //server.post("/contact", contactFormLogicFactory({ emailTransporter }));
