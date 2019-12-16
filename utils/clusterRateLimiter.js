@@ -1,7 +1,7 @@
 const { RateLimiterClusterMaster, RateLimiterCluster } = require('rate-limiter-flexible');
 const numCPUs = require("os").cpus().length;
-const maxRequests = 30 * numCPUs;
-const duration = 1;
+const maxRequests = process.env.RATE_LIMITER_REQUESTS * numCPUs;
+const duration = process.env.RATE_LIMITER_SECONDS;
 
 const clusterRateLimiter = isMaster => {
     if(isMaster){
@@ -15,7 +15,7 @@ const clusterRateLimiter = isMaster => {
                 keyPrefix: "middleware",
                 points: maxRequests, // number of requests (change this based on max number of requests it makes)
                 duration, // per x second(s) by IP
-                timeoutMs: 3000,
+                timeoutMs: 5000,
             });
             rateLimiter
             .consume(req.ip)

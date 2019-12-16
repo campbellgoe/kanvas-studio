@@ -1,5 +1,5 @@
 require("dotenv").config();
-const clusterRateLimiter = require("./utils/clusterRateLimiter.js");
+let clusterRateLimiter = require("./utils/clusterRateLimiter.js");
 //const { createTransporter } = require("./utils/mailer.js");
 const next = require("next");
 
@@ -11,17 +11,25 @@ const dev = !production;
 
 const app = next({ dev });
 //makeScalable should be true for deployment
-const makeScalable = process.env.DEPLOY_STATUS === "live";
+const runCluster = process.env.NODE_USE_CLUSTER === 'true';
+const runClusterRateLimiter = process.env.NODE_USE_CLUSTER_RATE_LIMITER === 'true';
 function init(app) {
   app
     .prepare()
     .then(function() {
       //const emailTransporter = await createTransporter();
-      if(makeScalable){
-        console.log('Running with cluster and rate limiting.', 'DEPLOY_STATUS:', process.env.DEPLOY_STATUS);
-        clusterLogic({ clusterRateLimiter, app }, serverLogic);
+      if(runCluster){
+        console.log('running as cluster');
+        if(runClusterRateLimiter){
+          console.log('cluster rate limiting enabled');
+          clusterLogic({ app, clusterRateLimiter }, serverLogic);
+        } else {
+          console.log('cluster rate limiting disabled');
+          clusterLogic({ app }, serverLogic);
+        }
+        
       } else {
-        console.warn('Running without cluster or rate limiting.', 'DEPLOY_STATUS:', process.env.DEPLOY_STATUS);
+        console.warn('running without cluster or rate limiting');
         serverLogic({ app });
       }
     })

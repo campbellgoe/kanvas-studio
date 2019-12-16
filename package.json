@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "yarn run flow && node server.js",
     "build": "yarn run flow && next build",
-    "start": "yarn run flow && cross-env NODE_ENV=production node server.js"
+    "start": "yarn run flow && cross-env NODE_ENV=production node server.js",
+    "siege": "siege -c255 -t1M http://localhost:4424"
   },
   "dependencies": {
     "body-parser": "^1.19.0",

@@ -3,7 +3,7 @@ const numCPUs = require("os").cpus().length;
 function clusterLogic({clusterRateLimiter, ...data}, cb) {
   if (cluster.isMaster) {
     //tell rate limiter to initialise master rate limiter code
-    clusterRateLimiter(true);
+    if(clusterRateLimiter) clusterRateLimiter(true);
     console.log(`Master ${process.pid} is running`);
 
     // Fork initial workers.
