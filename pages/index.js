@@ -121,10 +121,14 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
         height={height}
         setupFn={(ctx, draw) => {
           ctx.strokeStyle = "rgba(0,0,0,0.1)";
+          return {
+            cellDivisions: 40,
+          }
         }}
-        drawFn={(ctx, draw, frame) => {
+        drawFn={(ctx, draw, frame, { cellDivisions }) => {
+          
           ctx.clearRect(0,0,width,height);
-          draw.grid(0, 0, width, height, Math.min(width, height)/20);
+          draw.grid(0, 0, width, height, Math.max(width, height)/cellDivisions);
         }}
         frame={frame}
       />
@@ -143,6 +147,16 @@ type CanvasProps = {
   drawFn: function,
   frame: number,
 };
+// This is used to safely call setupFn and pipe setupFn data into setupData in the Canvas component state.
+// If args are all truthy, call fn with args and if it returns truthy data, call the setFn with that data.
+function safelyCallAndSetState(callFn: function, setFn: function, ...args){
+  if(args.filter(arg => arg).length){
+    const callFnData = callFn(...args);
+    if(callFnData){
+      setFn(callFnData);
+    }
+  }
+}
 const Canvas = styled(
   ({
     className = "",
@@ -157,12 +171,14 @@ const Canvas = styled(
     const [ctx, setCtx] = useState(null);
     const drawRef = useRef(null);
     const [draw, setDraw] = useState(null);
+    const [setupData, setSetupData] = useState(null);
     function getDrawer(ctx) {
       if (drawRef.current === null) {
         drawRef.current = new Drawer(ctx);
       }
       return drawRef.current;
     }
+    
     //initially get canvas, context, and draw.
     useEffect(() => {
       const canvas = elCanvas.current;
@@ -175,9 +191,7 @@ const Canvas = styled(
     }, []);
     //initial setup fn called, useful if canvas isn't resized before drawFn is called.
     useEffect(()=>{
-      if(ctx && draw){
-        setupFn(ctx, draw);
-      } 
+      safelyCallAndSetState(setupFn, setSetupData, ctx, draw);
     }, [ctx, draw, setupFn]);
     //
     useEffect(() => {
@@ -185,14 +199,12 @@ const Canvas = styled(
       if (canvas && (canvas.width !== width || canvas.height !== height)) {
         canvas.width = width;
         canvas.height = height;
-        if(ctx && draw){
-          //because setting width/height clears the canvas, setupFn again
-          setupFn(ctx, draw);
-        }
+        //because setting width/height clears the canvas, setupFn again
+        safelyCallAndSetState(setupFn, setSetupData, ctx, draw);
       }
     }, [width, height, ctx, draw, setupFn]);
     useEffect(()=>{
-      if(ctx && draw && frame) drawFn(ctx, draw, frame);
+      if(ctx && draw && frame) drawFn(ctx, draw, frame, setupData);
     }, [ctx, draw, drawFn, frame]);
     return <canvas className={className} ref={elCanvas} />;
   }
