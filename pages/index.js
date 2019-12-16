@@ -48,14 +48,29 @@ const useEventListener = (
   }, [target, listening, initialiseOnAttach, logAttachChange]);
   return setListening;
 };
+class Drawer {
+  ctx: CanvasRenderingContext2D;
+  constructor(ctx){
+    this.ctx = ctx;
+  }
+  grid(x: number, y: number, width: number, height: number, cellSize: number){
+    const ctx = this.ctx;
+    ctx.beginPath();
+    ctx.moveTo(10,25);
+    ctx.lineTo(100,100);
+    ctx.closePath();
+    ctx.stroke();
+  }
+}
 
+//TODO: move intialSize into Orchestrator props
 const initialSize = { width: 300, height: 150 };
-const Orchestrator = ({ className = "" }) => {
+const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   className += " Orchestrator";
   const [{ width, height }, setSize] = useState(initialSize);
   const elOrchestrator = useRef(null);
   const throttledGetWindowSize = useCallback(
-    throttle(300, e => {
+    throttle(resizeThrottleDelay, e => {
       const target = e.target;
       setSize({
         width: target.innerWidth,
@@ -73,22 +88,23 @@ const Orchestrator = ({ className = "" }) => {
       logAttachChange: true
     }
   );
-
+  
   return (
     <div className={className} ref={elOrchestrator}>
       <Canvas
         className="OrchestratorCanvas"
         width={width}
         height={height}
-        setup={ctx => {
+        setupFn={(ctx, draw) => {
           ctx.strokeStyle = "blue";
         }}
-        draw={ctx => {
+        drawFn={(ctx, draw) => {
           ctx.beginPath();
           ctx.moveTo(0, 0);
           ctx.lineTo(width / 2, height / 2);
           ctx.stroke();
           ctx.closePath();
+          draw.grid(width, height);
         }}
       />
       <p>width: {width}</p>
@@ -102,56 +118,71 @@ type CanvasProps = {
   className: string,
   width: number,
   height: number,
-  setup: function,
-  draw: function
+  setupFn: function,
+  drawFn: function
 };
 const Canvas = styled(
   ({
     className = "",
     width = 300,
     height = 150,
-    setup = Function.prototype,
-    draw = Function.prototype
+    setupFn = Function.prototype,
+    drawFn = Function.prototype
   }: CanvasProps) => {
     className += " Canvas";
     const elCanvas = useRef(null);
     const [ctx, setCtx] = useState(null);
+    const drawRef = useRef(null);
+    const [draw, setDraw] = useState(null);
+    function getDrawer(ctx) {
+      if (drawRef.current === null) {
+        drawRef.current = new Drawer(ctx);
+      }
+      return drawRef.current;
+    }
+    //initially get canvas, context, and draw.
     useEffect(() => {
       const canvas = elCanvas.current;
       if (canvas) {
         const context = canvas.getContext("2d");
         setCtx(context);
+        const draw = getDrawer(context)
+        setDraw(draw);
       }
     }, []);
+    //initial setup fn called, used if canvas isn't resized before drawFn is called.
     useEffect(()=>{
-      if(ctx) setup(ctx);
-    }, [ctx, setup])
+      if(ctx && draw){
+        setupFn(ctx, draw);
+      } 
+    }, [ctx, draw, setupFn]);
+    //
     useEffect(() => {
       const canvas = elCanvas.current;
       if (canvas && (canvas.width !== width || canvas.height !== height)) {
         canvas.width = width;
         canvas.height = height;
         if(ctx){
-          //because setting width/height clears the canvas, setup again
-          setup(ctx);
+          //because setting width/height clears the canvas, setupFn again
+          setupFn(ctx, draw);
         }
       }
         
       if (ctx) {
-        draw(ctx);
+        drawFn(ctx, draw);
       }
-    }, [width, height, ctx, setup, draw]);
+    }, [width, height, ctx, draw, setupFn, drawFn]);
     return <canvas className={className} ref={elCanvas} />;
   }
 )`
   background-color: white;
 `;
-const Plane = styled(({ className = "", displayGrid = true }) => {
-  className += " Plane";
-  const [coords, setCoords] = useState(origin);
+const Panel = styled(({ className = "" }) => {
+  className += " Panel";
+  //const [coords, setCoords] = useState(origin);
   return (
     <div className={className}>
-      {displayGrid && <Grid coords={coords} className="PlaneGrid" />}
+      <Orchestrator className="PanelOrchestrator" />
     </div>
   );
 })`
@@ -173,7 +204,7 @@ const KanvasStudio = ({ className = "" }: KanvasStudioProps) => {
   return (
     <div className={className}>
       <ToastContainer className="ToastContainer" />
-      <Plane />
+      <Panel />
     </div>
   );
 };
