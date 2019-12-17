@@ -6,7 +6,7 @@ import { ToastContainer } from "../components/ToastNotifications";
 import { window } from "ssr-window";
 //import useEventListener from '@toolia/use-event-listener';
 import { throttle } from "throttle-debounce";
-import safelyCallAndSetState from '../utils/safelyCallAndSetState.js';
+import safelyCallAndSetState from "../utils/safelyCallAndSetState.js";
 //import { useLocalStorage } from "react-use";
 //import React, { useState, useEffect, useRef } from "react";
 //import styled, { withTheme } from "styled-components";
@@ -50,31 +50,31 @@ const useEventListener = (
 };
 class Drawer {
   ctx: CanvasRenderingContext2D;
-  constructor(ctx){
+  constructor(ctx) {
     this.ctx = ctx;
   }
-  line(xStart:number, yStart:number, xEnd: number, yEnd: number){
+  line(xStart: number, yStart: number, xEnd: number, yEnd: number) {
     const ctx = this.ctx;
-    ctx.moveTo(xStart,yStart);
-    ctx.lineTo(xEnd,yEnd);
+    ctx.moveTo(xStart, yStart);
+    ctx.lineTo(xEnd, yEnd);
   }
   //sx, sy = start x, y.
   //ex, ey = end x, y.
   //cellSize is distance between lines
   //grid will automatically fill the area given by sx,sy,ex,ey with gridlines of cellSize apart.
-  grid(sx: number, sy: number, ex: number, ey: number, cellSize: number){
+  grid(sx: number, sy: number, ex: number, ey: number, cellSize: number) {
     const ctx = this.ctx;
-    const width = ex-sx;
-    const height = ey-sy;
-    const xLines = width/cellSize;
-    const yLines = height/cellSize;
+    const width = ex - sx;
+    const height = ey - sy;
+    const xLines = width / cellSize;
+    const yLines = height / cellSize;
     ctx.beginPath();
-    for(let ix = 0; ix < xLines; ix ++){
-      const x = sx+ix*cellSize;
+    for (let ix = 0; ix < xLines; ix++) {
+      const x = sx + ix * cellSize;
       this.line(x, sy, x, ey);
     }
-    for(let iy = 0; iy < yLines; iy ++){
-      const y = sy+iy*cellSize;
+    for (let iy = 0; iy < yLines; iy++) {
+      const y = sy + iy * cellSize;
       this.line(sx, y, ex, y);
     }
     ctx.stroke();
@@ -87,6 +87,14 @@ const initialSize = { width: 300, height: 150 };
 const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   className += " Orchestrator";
   const [{ width, height }, setSize] = useState(initialSize);
+  const [pointer, setPointer] = useState({
+    x: null,
+    y: null,
+    isDown: false,
+    pointerType: null,
+    lx: null,
+    ly: null
+  });
   const [frame, setFrame] = useState(0);
   const elOrchestrator = useRef(null);
   const throttledGetWindowSize = useCallback(
@@ -108,9 +116,48 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
       logAttachChange: true
     }
   );
-  useEffect(()=>{
-    setTimeout(()=>{
-      setFrame(frame+1)
+  //TODO: support touch / gesture / pointer devices (cross-device, cross-browser)
+  //TODO: refactor handlePointInput and test it plenty
+  // const handlePointInput = (e: PointerEvent | TouchEvent | MouseEvent ) => {
+  //   let x = 0;
+  //   let y = 0;
+  //   let pointerType;
+  //   //check if it is a PointerEvent first, because it's coolest
+  //   if (e instanceof PointerEvent) {
+  //     //NOTE: PointerEvent inherits from MouseEvent, so try not to duplicate code
+  //     x = e.pageX;
+  //     y = e.pageY;
+  //     pointerType = e.pointerType;
+  //   } else if (e instanceof TouchEvent) {
+  //     //handle touch event
+  //     //TODO: look into cases where multiple touches could be handled
+  //     const touches = e.touches || e.changedTouches;
+  //     const firstTouch = touches.length && touches[0];
+  //     pointerType = 'touch';
+  //   } else {
+  //     //handle MouseEvent
+  //     x = e.pageX;
+  //     y = e.pageY;
+  //     pointerType = 'mouse';
+  //   }
+  //   setPointer({ x, y, pointerType, ...pointer });
+  // };
+  // usePointInput(useCallback(handlePointInput), [pointer], { logAttachChange: true });
+  // const setListenToMouseMove = useEventListener(
+  //   window,
+  //   "mousemove",
+  //   useCallback(handlePointInput, [pointer]),
+  //   {
+  //     logAttachChange: true
+  //   }
+  // );
+  // useEffect(() => {
+  //   console.log("pointer change:", pointer);
+  // }, [pointer]);
+  //TODO: improve the animation loop by using requestAnimationFrame instead of setTimeout
+  useEffect(() => {
+    setTimeout(() => {
+      setFrame(frame + 1);
     }, 30);
   }, [frame]);
   return (
@@ -122,13 +169,18 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
         setupFn={(ctx, draw) => {
           ctx.strokeStyle = "rgba(0,0,0,0.1)";
           return {
-            cellDivisions: 40,
-          }
+            cellDivisions: 40
+          };
         }}
         drawFn={(ctx, draw, frame, { cellDivisions }) => {
-          
-          ctx.clearRect(0,0,width,height);
-          draw.grid(0, 0, width, height, Math.max(width, height)/cellDivisions);
+          ctx.clearRect(0, 0, width, height);
+          draw.grid(
+            0,
+            0,
+            width,
+            height,
+            Math.max(width, height) / cellDivisions
+          );
         }}
         frame={frame}
       />
@@ -145,7 +197,7 @@ type CanvasProps = {
   height: number,
   setupFn: function,
   drawFn: function,
-  frame: number,
+  frame: number
 };
 
 const Canvas = styled(
@@ -169,19 +221,19 @@ const Canvas = styled(
       }
       return drawRef.current;
     }
-    
+
     //initially get canvas, context, and draw.
     useEffect(() => {
       const canvas = elCanvas.current;
       if (canvas) {
         const context = canvas.getContext("2d");
         setCtx(context);
-        const draw = getDrawer(context)
+        const draw = getDrawer(context);
         setDraw(draw);
       }
     }, []);
     //initial setup fn called, useful if canvas isn't resized before drawFn is called.
-    useEffect(()=>{
+    useEffect(() => {
       safelyCallAndSetState(setupFn, setSetupData, ctx, draw);
     }, [ctx, draw, setupFn]);
     //
@@ -194,8 +246,8 @@ const Canvas = styled(
         safelyCallAndSetState(setupFn, setSetupData, ctx, draw);
       }
     }, [width, height, ctx, draw, setupFn]);
-    useEffect(()=>{
-      if(ctx && draw && frame) drawFn(ctx, draw, frame, setupData);
+    useEffect(() => {
+      if (ctx && draw && frame) drawFn(ctx, draw, frame, setupData);
     }, [ctx, draw, drawFn, frame]);
     return <canvas className={className} ref={elCanvas} />;
   }
