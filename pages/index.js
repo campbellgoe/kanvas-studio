@@ -96,7 +96,8 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   const [pointer, setPointer] = useState({});
   //animation frame
   const [frame, setFrame] = useState(0);
-
+  //grid cell size
+  const [cellSize, setCellSize] = useState(40);
   const elOrchestrator = useRef(null);
   const elCanvasContainer = useRef(null);
   const throttledGetWindowSize = useCallback(
@@ -182,6 +183,9 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
       setLastOffset({oxLast: ox, oyLast: oy });
     }
   }, [pointer]);
+  const getCellSize = cellDivisions => {
+    return 
+  }
   return (
     <div className={className} ref={elOrchestrator}>
       <div className="OrchestratorCanvasContainer" ref={elCanvasContainer}>
@@ -191,25 +195,22 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
           height={height}
           setupFn={(ctx, draw) => {
             ctx.strokeStyle = "rgba(0,0,0,0.1)";
-            return {
-              cellDivisions: 40
-            };
+            setCellSize(Math.max(width, height) / 40);
           }}
-          drawFn={(ctx, draw, frame, { cellDivisions }) => {
+          drawFn={(ctx, draw, frame) => {
             ctx.clearRect(0, 0, width, height);
             draw.grid(
-              ox,
-              oy,
+              ox%cellSize-cellSize,
+              oy%cellSize-cellSize,
               width,
               height,
-              Math.max(width, height) / cellDivisions
+              cellSize
             );
           }}
           frame={frame}
         />
       </div>
-      <p>width: {width}</p>
-      <p>height: {height}</p>
+      <p>offset: {Math.floor(ox/cellSize)+', '+Math.floor(oy/cellSize)}</p>
       <button onClick={() => setListenToSize(false)}>Un-listen</button>
       <button onClick={() => setListenToSize(true)}>Listen</button>
     </div>
