@@ -7,6 +7,7 @@ import { window } from "ssr-window";
 //import useEventListener from '@toolia/use-event-listener';
 import { throttle } from "throttle-debounce";
 import safelyCallAndSetState from "../utils/safelyCallAndSetState.js";
+import registerPointEventListeners from '../utils/pointInput.js'
 //import { useLocalStorage } from "react-use";
 //import React, { useState, useEffect, useRef } from "react";
 //import styled, { withTheme } from "styled-components";
@@ -87,16 +88,10 @@ const initialSize = { width: 300, height: 150 };
 const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   className += " Orchestrator";
   const [{ width, height }, setSize] = useState(initialSize);
-  const [pointer, setPointer] = useState({
-    x: null,
-    y: null,
-    isDown: false,
-    pointerType: null,
-    lx: null,
-    ly: null
-  });
+  const [pointer, setPointer] = useState({});
   const [frame, setFrame] = useState(0);
   const elOrchestrator = useRef(null);
+  const elCanvasContainer = useRef(null);
   const throttledGetWindowSize = useCallback(
     throttle(resizeThrottleDelay, e => {
       const target = e.target;
@@ -154,36 +149,48 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   // useEffect(() => {
   //   console.log("pointer change:", pointer);
   // }, [pointer]);
+  useEffect(()=>{
+    if(elCanvasContainer) {
+      return registerPointEventListeners(elCanvasContainer.current, { handleContextMenu: true }, pointInputData=>{
+        setPointer(pointInputData);
+      });
+    }
+  }, []);
   //TODO: improve the animation loop by using requestAnimationFrame instead of setTimeout
   useEffect(() => {
     setTimeout(() => {
       setFrame(frame + 1);
     }, 30);
   }, [frame]);
+  useEffect(()=>{
+    console.log('pointer:', pointer);
+  }, [pointer]);
   return (
     <div className={className} ref={elOrchestrator}>
-      <Canvas
-        className="OrchestratorCanvas"
-        width={width}
-        height={height}
-        setupFn={(ctx, draw) => {
-          ctx.strokeStyle = "rgba(0,0,0,0.1)";
-          return {
-            cellDivisions: 40
-          };
-        }}
-        drawFn={(ctx, draw, frame, { cellDivisions }) => {
-          ctx.clearRect(0, 0, width, height);
-          draw.grid(
-            0,
-            0,
-            width,
-            height,
-            Math.max(width, height) / cellDivisions
-          );
-        }}
-        frame={frame}
-      />
+      <div className="OrchestratorCanvasContainer" ref={elCanvasContainer}>
+        <Canvas
+          className="OrchestratorCanvas"
+          width={width}
+          height={height}
+          setupFn={(ctx, draw) => {
+            ctx.strokeStyle = "rgba(0,0,0,0.1)";
+            return {
+              cellDivisions: 40
+            };
+          }}
+          drawFn={(ctx, draw, frame, { cellDivisions }) => {
+            ctx.clearRect(0, 0, width, height);
+            draw.grid(
+              0,
+              0,
+              width,
+              height,
+              Math.max(width, height) / cellDivisions
+            );
+          }}
+          frame={frame}
+        />
+      </div>
       <p>width: {width}</p>
       <p>height: {height}</p>
       <button onClick={() => setListenToSize(false)}>Un-listen</button>
