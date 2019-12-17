@@ -87,9 +87,16 @@ class Drawer {
 const initialSize = { width: 300, height: 150 };
 const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   className += " Orchestrator";
+  //offset from origin (0, 0)
+  const [{ ox, oy }, setOffset] = useState({ ox: 0, oy: 0});
+  const [{ oxLast, oyLast }, setLastOffset] = useState({ oxLast: 0, oyLast: 0 });
+  //viewport width/height
   const [{ width, height }, setSize] = useState(initialSize);
+  //mouse/touch input
   const [pointer, setPointer] = useState({});
+  //animation frame
   const [frame, setFrame] = useState(0);
+
   const elOrchestrator = useRef(null);
   const elCanvasContainer = useRef(null);
   const throttledGetWindowSize = useCallback(
@@ -153,6 +160,7 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
     if(elCanvasContainer) {
       return registerPointEventListeners(elCanvasContainer.current, { handleContextMenu: true }, pointInputData=>{
         setPointer(pointInputData);
+        //TODO: move logic from pointer useEffect below to this function...
       });
     }
   }, []);
@@ -164,6 +172,15 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   }, [frame]);
   useEffect(()=>{
     console.log('pointer:', pointer);
+    if(pointer.isDrag){
+      //change x,y canvas offset
+      setOffset({ ox: pointer.x-pointer.downX+oxLast, oy: pointer.y-pointer.downY+oyLast });
+    } 
+    //on mouse up, save last offset x,y and add that to the offset when dragging.
+    //e.g. keep the offset from resetting back to 0,0.
+    if(!pointer.isDown){
+      setLastOffset({oxLast: ox, oyLast: oy });
+    }
   }, [pointer]);
   return (
     <div className={className} ref={elOrchestrator}>
@@ -181,8 +198,8 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
           drawFn={(ctx, draw, frame, { cellDivisions }) => {
             ctx.clearRect(0, 0, width, height);
             draw.grid(
-              0,
-              0,
+              ox,
+              oy,
               width,
               height,
               Math.max(width, height) / cellDivisions

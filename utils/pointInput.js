@@ -79,6 +79,11 @@ export const registerMouseAndTouchEventListeners = (element = document, { handle
       e.type.endsWith("down") ||
       e.type === "contextmenu"
     ) {
+      if(isDown){
+        //already down yet clicking 'down' again, so it should imagine this is a mouseup/touchend instead.
+        isDown = false;
+        return;
+      }
       isDown = true;
       if (x === null) x = downPosition.x;
       if (y === null) y = downPosition.y;
