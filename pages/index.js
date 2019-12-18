@@ -85,6 +85,7 @@ class Drawer {
 
 //TODO: move intialSize into Orchestrator props
 const initialSize = { width: 300, height: 150 };
+const gridCellSizeDivisor = 40;//divisions per width/height
 const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   className += " Orchestrator";
   //offset from origin (0, 0)
@@ -145,9 +146,6 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
       setLastOffset({oxLast: ox, oyLast: oy });
     }
   }, [pointer]);
-  const getCellSize = cellDivisions => {
-    return 
-  }
   return (
     <div className={className} ref={elOrchestrator}>
       <div className="OrchestratorCanvasContainer" ref={elCanvasContainer}>
@@ -157,7 +155,7 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
           height={height}
           resizeEventDrawFn={(ctx, draw) => {
             console.log('after resize draw');
-            setCellSize(Math.max(width, height) / 40);
+            setCellSize(Math.max(width, height) / gridCellSizeDivisor);
           }}
           animationFrameDrawFn={(ctx, draw, frame) => {
             ctx.strokeStyle = "rgba(0,0,0,0.1)";
@@ -171,7 +169,7 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
             );
             ctx.fillStyle = 'black';
             ctx.beginPath();
-            ctx.arc(ox+width/2, oy+height/2, cellSize/2, 0, Math.PI*2);
+            ctx.arc(ox+(gridCellSizeDivisor*cellSize/2), oy+(gridCellSizeDivisor*cellSize/2), cellSize/2, 0, Math.PI*2);
             ctx.fill();
             ctx.closePath();
           }}
