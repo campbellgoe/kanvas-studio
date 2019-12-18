@@ -119,44 +119,6 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
       logAttachChange: true
     }
   );
-  //TODO: support touch / gesture / pointer devices (cross-device, cross-browser)
-  //TODO: refactor handlePointInput and test it plenty
-  // const handlePointInput = (e: PointerEvent | TouchEvent | MouseEvent ) => {
-  //   let x = 0;
-  //   let y = 0;
-  //   let pointerType;
-  //   //check if it is a PointerEvent first, because it's coolest
-  //   if (e instanceof PointerEvent) {
-  //     //NOTE: PointerEvent inherits from MouseEvent, so try not to duplicate code
-  //     x = e.pageX;
-  //     y = e.pageY;
-  //     pointerType = e.pointerType;
-  //   } else if (e instanceof TouchEvent) {
-  //     //handle touch event
-  //     //TODO: look into cases where multiple touches could be handled
-  //     const touches = e.touches || e.changedTouches;
-  //     const firstTouch = touches.length && touches[0];
-  //     pointerType = 'touch';
-  //   } else {
-  //     //handle MouseEvent
-  //     x = e.pageX;
-  //     y = e.pageY;
-  //     pointerType = 'mouse';
-  //   }
-  //   setPointer({ x, y, pointerType, ...pointer });
-  // };
-  // usePointInput(useCallback(handlePointInput), [pointer], { logAttachChange: true });
-  // const setListenToMouseMove = useEventListener(
-  //   window,
-  //   "mousemove",
-  //   useCallback(handlePointInput, [pointer]),
-  //   {
-  //     logAttachChange: true
-  //   }
-  // );
-  // useEffect(() => {
-  //   console.log("pointer change:", pointer);
-  // }, [pointer]);
   useEffect(()=>{
     if(elCanvasContainer) {
       return registerPointEventListeners(elCanvasContainer.current, { handleContextMenu: true }, pointInputData=>{
@@ -172,7 +134,7 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
     }, 30);
   }, [frame]);
   useEffect(()=>{
-    console.log('pointer:', pointer);
+    //console.log('pointer:', pointer);
     if(pointer.isDrag){
       //change x,y canvas offset
       setOffset({ ox: pointer.x-pointer.downX+oxLast, oy: pointer.y-pointer.downY+oyLast });
@@ -193,11 +155,12 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
           className="OrchestratorCanvas"
           width={width}
           height={height}
-          setupFn={(ctx, draw) => {
-            ctx.strokeStyle = "rgba(0,0,0,0.1)";
+          resizeEventDrawFn={(ctx, draw) => {
+            console.log('after resize draw');
             setCellSize(Math.max(width, height) / 40);
           }}
-          drawFn={(ctx, draw, frame) => {
+          animationFrameDrawFn={(ctx, draw, frame) => {
+            ctx.strokeStyle = "rgba(0,0,0,0.1)";
             ctx.clearRect(0, 0, width, height);
             draw.grid(
               ox%cellSize-cellSize,
@@ -206,6 +169,11 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
               height,
               cellSize
             );
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(ox+width/2, oy+height/2, cellSize/2, 0, Math.PI*2);
+            ctx.fill();
+            ctx.closePath();
           }}
           frame={frame}
         />
@@ -220,8 +188,8 @@ type CanvasProps = {
   className: string,
   width: number,
   height: number,
-  setupFn: function,
-  drawFn: function,
+  resizeEventDrawFn: function,
+  animationFrameDrawFn: function,
   frame: number
 };
 
@@ -230,8 +198,8 @@ const Canvas = styled(
     className = "",
     width = 300,
     height = 150,
-    setupFn = Function.prototype,
-    drawFn = Function.prototype,
+    resizeEventDrawFn = Function.prototype,
+    animationFrameDrawFn = Function.prototype,
     frame = 0
   }: CanvasProps) => {
     className += " Canvas";
@@ -257,23 +225,19 @@ const Canvas = styled(
         setDraw(draw);
       }
     }, []);
-    //initial setup fn called, useful if canvas isn't resized before drawFn is called.
-    useEffect(() => {
-      safelyCallAndSetState(setupFn, setSetupData, ctx, draw);
-    }, [ctx, draw, setupFn]);
-    //
+    
     useEffect(() => {
       const canvas = elCanvas.current;
       if (canvas && (canvas.width !== width || canvas.height !== height)) {
         canvas.width = width;
         canvas.height = height;
-        //because setting width/height clears the canvas, calling setupFn again
-        safelyCallAndSetState(setupFn, setSetupData, ctx, draw);
+        //because setting width/height clears the canvas, calling resizeEventDrawFn again
+        safelyCallAndSetState(resizeEventDrawFn, setSetupData, ctx, draw);
       }
-    }, [width, height, ctx, draw, setupFn]);
+    }, [width, height, ctx, draw, resizeEventDrawFn]);
     useEffect(() => {
-      if (ctx && draw && frame) drawFn(ctx, draw, frame, setupData);
-    }, [ctx, draw, drawFn, frame]);
+      if (ctx && draw && frame) animationFrameDrawFn(ctx, draw, frame, setupData);
+    }, [ctx, draw, animationFrameDrawFn, frame]);
     return <canvas className={className} ref={elCanvas} />;
   }
 )`
