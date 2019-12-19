@@ -58,9 +58,6 @@ const StateContainer = ({ children }) => {
   );
 };
 export default class MyApp extends App {
-  static async getInitialProps({ router }) {
-    return router.query;
-  }
   render() {
     const { Component, pageProps } = this.props;
     return (
