@@ -7,7 +7,7 @@ import { window } from "ssr-window";
 //import useEventListener from '@toolia/use-event-listener';
 import { throttle } from "throttle-debounce";
 import safelyCallAndSetState from "../utils/safelyCallAndSetState.js";
-import registerPointEventListeners from '../utils/pointInput.js'
+import { snap, pointInput as registerPointEventListeners } from '../utils';
 //import { useLocalStorage } from "react-use";
 //import React, { useState, useEffect, useRef } from "react";
 //import styled, { withTheme } from "styled-components";
@@ -82,7 +82,6 @@ class Drawer {
     ctx.closePath();
   }
 }
-
 //TODO: move intialSize into Orchestrator props
 const initialSize = { width: 300, height: 150 };
 const gridCellSizeDivisor = 40;//divisions per width/height
@@ -169,7 +168,9 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
             );
             ctx.fillStyle = 'black';
             ctx.beginPath();
-            ctx.arc(ox+(gridCellSizeDivisor*cellSize/2), oy+(gridCellSizeDivisor*cellSize/2), cellSize/2, 0, Math.PI*2);
+            const oxCentered = ox+snap(width/2, cellSize);
+            const oyCentered = oy+snap(height/2, cellSize);
+            ctx.arc(oxCentered, oyCentered, cellSize/2, 0, Math.PI*2);
             ctx.fill();
             ctx.closePath();
           }}

@@ -17,3 +17,4 @@ export const useStateValue = () => {
   const [state, dispatch] = useContext(StateContext);
   return [state, createActionDispatcher(dispatch)];
 }
+export default useStateValue;
