@@ -81,6 +81,9 @@ class Drawer {
     ctx.stroke();
     ctx.closePath();
   }
+  circle(x, y, r){
+    this.ctx.arc(x, y, r, 0, Math.PI*2);
+  }
 }
 //TODO: move intialSize into Orchestrator props
 const initialSize = { width: 300, height: 150 };
@@ -145,6 +148,14 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
       setLastOffset({oxLast: ox, oyLast: oy });
     }
   }, [pointer]);
+
+  //relative to top-left of screen, in pixels.
+  const getSnappedToGrid = (x, y) => {
+    return {
+      x: ox+snap(x, cellSize),
+      y: oy+snap(y, cellSize),
+    }
+  }
   return (
     <div className={className} ref={elOrchestrator}>
       <div className="OrchestratorCanvasContainer" ref={elCanvasContainer}>
@@ -158,6 +169,7 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
           }}
           animationFrameDrawFn={(ctx, draw, frame) => {
             ctx.strokeStyle = "rgba(0,0,0,0.1)";
+            ctx.lineWidth = 1;
             ctx.clearRect(0, 0, width, height);
             draw.grid(
               ox%cellSize-cellSize,
@@ -166,12 +178,15 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
               height,
               cellSize
             );
-            ctx.fillStyle = 'black';
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            const oxCentered = ox+snap(width/2, cellSize);
-            const oyCentered = oy+snap(height/2, cellSize);
-            ctx.arc(oxCentered, oyCentered, cellSize/2, 0, Math.PI*2);
-            ctx.fill();
+            const origin = getSnappedToGrid(width/2, height/2);
+            //draw.circle(origin.x, origin.y, cellSize/2);
+            //ctx.fill();
+            draw.line(origin.x, origin.y-cellSize, origin.x, origin.y+cellSize);
+            draw.line(origin.x-cellSize, origin.y, origin.x+cellSize, origin.y);
+            ctx.stroke();
             ctx.closePath();
           }}
           frame={frame}
