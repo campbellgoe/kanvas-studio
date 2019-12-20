@@ -5,3 +5,4 @@ node_modules/
 .env.*.backup
 .DS_Store
 yarn-error.log
+flow-typed/npm/

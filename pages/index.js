@@ -109,6 +109,10 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   const [frame, setFrame] = useState(0);
   //grid cell size
   const [cellSize, setCellSize] = useState(40);
+  const [imageSources, setImageSources] = useState([]);
+  useEffect(()=>{
+    console.log('image sources:::', imageSources);
+  }, [imageSources]);
   const elOrchestrator = useRef(null);
   const elCanvasContainer = useRef(null);
   const throttledGetWindowSize = useCallback(
@@ -212,7 +216,10 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
       <button onClick={() => setListenToResize(!listeningToResize)}>
         {listeningToResize ? "Ignore resize" : "Listen to resize"}
       </button>
-      <ImageInput />
+      <ImageInput onChange={setImageSources}/>
+      {imageSources.map((src, index) => {
+        return <img key={'img'+index} src={src} alt="User uploaded"/>
+      })}
     </div>
   );
 };
