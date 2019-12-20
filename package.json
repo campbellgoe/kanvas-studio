@@ -5,7 +5,8 @@
     "dev": "yarn run flow && node server.js",
     "build": "yarn run flow && next build",
     "start": "yarn run flow && cross-env NODE_ENV=production node server.js",
-    "siege": "siege -c255 -t1M http://localhost:4424"
+    "siege": "siege -c255 -t1M http://localhost:4424",
+    "set:env": "bash bin/set.env.sh"
   },
   "dependencies": {
     "body-parser": "^1.19.0",
