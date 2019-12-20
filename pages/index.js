@@ -3,11 +3,12 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import styled from "styled-components";
 import { ToastContainer } from "../components/ToastNotifications";
+import ImageInput from "../components/ImageInput";
 import { window } from "ssr-window";
 //import useEventListener from '@toolia/use-event-listener';
 import { throttle } from "throttle-debounce";
 import safelyCallAndSetState from "../utils/safelyCallAndSetState.js";
-import { snap, pointInput as registerPointEventListeners } from '../utils';
+import { snap, pointInput as registerPointEventListeners } from "../utils";
 //import { useLocalStorage } from "react-use";
 //import React, { useState, useEffect, useRef } from "react";
 //import styled, { withTheme } from "styled-components";
@@ -47,7 +48,7 @@ const useEventListener = (
       target.removeEventListener(eventName, memoizedCallback, listenerOpts);
     };
   }, [target, listening, initialiseOnAttach, logAttachChange]);
-  return setListening;
+  return [listening, setListening];
 };
 class Drawer {
   ctx: CanvasRenderingContext2D;
@@ -81,22 +82,25 @@ class Drawer {
     ctx.stroke();
     ctx.closePath();
   }
-  circle(x, y, r){
-    this.ctx.arc(x, y, r, 0, Math.PI*2);
+  circle(x, y, r) {
+    this.ctx.arc(x, y, r, 0, Math.PI * 2);
   }
-  cross(x,y,r){
-    this.line(x, y-r, x, y+r);
-    this.line(x-r, y, x+r, y);
+  cross(x, y, r) {
+    this.line(x, y - r, x, y + r);
+    this.line(x - r, y, x + r, y);
   }
 }
 //TODO: move intialSize into Orchestrator props
 const initialSize = { width: 300, height: 150 };
-const gridCellSizeDivisor = 40;//divisions per width/height
+const gridCellSizeDivisor = 40; //divisions per width/height
 const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   className += " Orchestrator";
   //offset from origin (0, 0)
-  const [{ ox, oy }, setOffset] = useState({ ox: 0, oy: 0});
-  const [{ oxLast, oyLast }, setLastOffset] = useState({ oxLast: 0, oyLast: 0 });
+  const [{ ox, oy }, setOffset] = useState({ ox: 0, oy: 0 });
+  const [{ oxLast, oyLast }, setLastOffset] = useState({
+    oxLast: 0,
+    oyLast: 0
+  });
   //viewport width/height
   const [{ width, height }, setSize] = useState(initialSize);
   //mouse/touch input
@@ -117,7 +121,7 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
     }),
     [throttle]
   );
-  const setListenToSize = useEventListener(
+  const [listeningToResize, setListenToResize] = useEventListener(
     window,
     "resize",
     throttledGetWindowSize,
@@ -126,12 +130,16 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
       logAttachChange: true
     }
   );
-  useEffect(()=>{
-    if(elCanvasContainer) {
-      return registerPointEventListeners(elCanvasContainer.current, { handleContextMenu: true }, pointInputData=>{
-        setPointer(pointInputData);
-        //TODO: move logic from pointer useEffect below to this function...
-      });
+  useEffect(() => {
+    if (elCanvasContainer) {
+      return registerPointEventListeners(
+        elCanvasContainer.current,
+        { handleContextMenu: true },
+        pointInputData => {
+          setPointer(pointInputData);
+          //TODO: move logic from pointer useEffect below to this function...
+        }
+      );
     }
   }, []);
   //TODO: improve the animation loop by using requestAnimationFrame instead of setTimeout
@@ -140,26 +148,29 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
       setFrame(frame + 1);
     }, 30);
   }, [frame]);
-  useEffect(()=>{
+  useEffect(() => {
     //console.log('pointer:', pointer);
-    if(pointer.isDrag){
+    if (pointer.isDrag) {
       //change x,y canvas offset
-      setOffset({ ox: pointer.x-pointer.downX+oxLast, oy: pointer.y-pointer.downY+oyLast });
-    } 
+      setOffset({
+        ox: pointer.x - pointer.downX + oxLast,
+        oy: pointer.y - pointer.downY + oyLast
+      });
+    }
     //on mouse up, save last offset x,y and add that to the offset when dragging.
     //e.g. keep the offset from resetting back to 0,0.
-    if(!pointer.isDown){
-      setLastOffset({oxLast: ox, oyLast: oy });
+    if (!pointer.isDown) {
+      setLastOffset({ oxLast: ox, oyLast: oy });
     }
   }, [pointer]);
 
   //relative to top-left of screen, in pixels.
   const getSnappedToGrid = (x, y) => {
     return {
-      x: ox+snap(x, cellSize),
-      y: oy+snap(y, cellSize),
-    }
-  }
+      x: ox + snap(x, cellSize),
+      y: oy + snap(y, cellSize)
+    };
+  };
   return (
     <div className={className} ref={elOrchestrator}>
       <div className="OrchestratorCanvasContainer" ref={elCanvasContainer}>
@@ -168,7 +179,7 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
           width={width}
           height={height}
           resizeEventDrawFn={(ctx, draw) => {
-            console.log('after resize draw');
+            console.log("after resize draw");
             setCellSize(Math.max(width, height) / gridCellSizeDivisor);
           }}
           animationFrameDrawFn={(ctx, draw, frame) => {
@@ -176,29 +187,32 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
             ctx.lineWidth = 1;
             ctx.clearRect(0, 0, width, height);
             draw.grid(
-              ox%cellSize-cellSize,
-              oy%cellSize-cellSize,
+              (ox % cellSize) - cellSize,
+              (oy % cellSize) - cellSize,
               width,
               height,
               cellSize
             );
-            ctx.strokeStyle = 'black';
+            ctx.strokeStyle = "black";
             ctx.lineWidth = 2;
             ctx.beginPath();
-            const origin = getSnappedToGrid(width/2, height/2);
+            const origin = getSnappedToGrid(width / 2, height / 2);
             //draw.circle(origin.x, origin.y, cellSize/2);
             //ctx.fill();
-            draw.cross(origin.x, origin.y, cellSize*2);
+            draw.cross(origin.x, origin.y, cellSize * 2);
             ctx.stroke();
             ctx.closePath();
-
           }}
           frame={frame}
         />
       </div>
-      <p>offset: {Math.floor(ox/cellSize)+', '+Math.floor(oy/cellSize)}</p>
-      <button onClick={() => setListenToSize(false)}>Un-listen</button>
-      <button onClick={() => setListenToSize(true)}>Listen</button>
+      <p>
+        offset: {Math.floor(ox / cellSize) + ", " + Math.floor(oy / cellSize)}
+      </p>
+      <button onClick={() => setListenToResize(!listeningToResize)}>
+        {listeningToResize ? "Ignore resize" : "Listen to resize"}
+      </button>
+      <ImageInput />
     </div>
   );
 };
@@ -243,7 +257,7 @@ const Canvas = styled(
         setDraw(draw);
       }
     }, []);
-    
+
     useEffect(() => {
       const canvas = elCanvas.current;
       if (canvas && (canvas.width !== width || canvas.height !== height)) {
@@ -254,7 +268,8 @@ const Canvas = styled(
       }
     }, [width, height, ctx, draw, resizeEventDrawFn]);
     useEffect(() => {
-      if (ctx && draw && frame) animationFrameDrawFn(ctx, draw, frame, setupData);
+      if (ctx && draw && frame)
+        animationFrameDrawFn(ctx, draw, frame, setupData);
     }, [ctx, draw, animationFrameDrawFn, frame]);
     return <canvas className={className} ref={elCanvas} />;
   }
