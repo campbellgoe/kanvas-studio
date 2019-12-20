@@ -84,6 +84,10 @@ class Drawer {
   circle(x, y, r){
     this.ctx.arc(x, y, r, 0, Math.PI*2);
   }
+  cross(x,y,r){
+    this.line(x, y-r, x, y+r);
+    this.line(x-r, y, x+r, y);
+  }
 }
 //TODO: move intialSize into Orchestrator props
 const initialSize = { width: 300, height: 150 };
@@ -184,10 +188,10 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
             const origin = getSnappedToGrid(width/2, height/2);
             //draw.circle(origin.x, origin.y, cellSize/2);
             //ctx.fill();
-            draw.line(origin.x, origin.y-cellSize, origin.x, origin.y+cellSize);
-            draw.line(origin.x-cellSize, origin.y, origin.x+cellSize, origin.y);
+            draw.cross(origin.x, origin.y, cellSize*2);
             ctx.stroke();
             ctx.closePath();
+
           }}
           frame={frame}
         />
