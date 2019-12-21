@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import styled from "styled-components";
 import { ToastContainer } from "../components/ToastNotifications";
 import ImageInput from "../components/ImageInput";
+import ProjectInput from '../components/ProjectInput';
 import { window } from "ssr-window";
 //import useEventListener from '@toolia/use-event-listener';
 import { throttle } from "throttle-debounce";
@@ -17,12 +18,186 @@ import { snap, pointInput as registerPointEventListeners } from "../utils";
 //import makeButtonStyles from "../utils/makeButtonStyles";
 //import ExternalLink from "../components/ExternalLink";
 //const uuid = require("uuid/v4");
-
+import S3 from 'aws-sdk/clients/s3';
 const origin = {
   x: 0,
   y: 0,
   z: 0
 };
+const bucketName = 'massless.solutions';
+const s3config = {
+  credentials: {
+    accessKeyId: process.env.AWS_CONFIG_ID,
+    secretAccessKey: process.env.AWS_CONFIG_SECRET,
+  },
+  params: { Bucket: bucketName },
+  region: 'eu-west-2',
+  apiVersion: '2006-03-01'
+}
+const s3 = new S3(s3config);
+function getHtml(template) {
+          return template.join('\n');
+       }
+// function viewAlbum(albumName) {
+//   var albumPhotosKey = encodeURIComponent(albumName) + "//";
+//   s3.listObjects({ Prefix: albumPhotosKey }, function(err, data) {
+//     if (err) {
+//       return alert("There was an error viewing your album: " + err.message);
+//     }
+//     // 'this' references the AWS.Response instance that represents the response
+//     var href = this.request.httpRequest.endpoint.href;
+//     var bucketUrl = href + bucketName + "/";
+
+//     var photos = data.Contents.map(function(photo) {
+//       var photoKey = photo.Key;
+//       var photoUrl = bucketUrl + encodeURIComponent(photoKey);
+//       return getHtml([
+//         "<span>",
+//         "<div>",
+//         '<img style="width:128px;height:128px;" src="' + photoUrl + '"/>',
+//         "</div>",
+//         "<div>",
+//         "<span onclick=\"deletePhoto('" +
+//           albumName +
+//           "','" +
+//           photoKey +
+//           "')\">",
+//         "X",
+//         "</span>",
+//         "<span>",
+//         photoKey.replace(albumPhotosKey, ""),
+//         "</span>",
+//         "</div>",
+//         "</span>"
+//       ]);
+//     });
+//     var message = photos.length
+//       ? "<p>Click on the X to delete the photo</p>"
+//       : "<p>You do not have any photos in this album. Please add photos.</p>";
+//     var htmlTemplate = [
+//       "<h2>",
+//       "Album: " + albumName,
+//       "</h2>",
+//       message,
+//       "<div>",
+//       getHtml(photos),
+//       "</div>",
+//       '<input id="photoupload" type="file" accept="image/*">',
+//       '<button id="addphoto" onclick="addPhoto(\'' + albumName + "')\">",
+//       "Add Photo",
+//       "</button>",
+//       '<button onclick="listAlbums()">',
+//       "Back To Albums",
+//       "</button>"
+//     ];
+//     document.getElementById("app").innerHTML = getHtml(htmlTemplate);
+//   });
+// }
+// function deletePhoto(albumName, photoKey) {
+//   s3.deleteObject({ Key: photoKey }, function(err, data) {
+//     if (err) {
+//       return alert("There was an error deleting your photo: ", err.message);
+//     }
+//     alert("Successfully deleted photo.");
+//     viewAlbum(albumName);
+//   });
+// }
+
+function listAlbums(cb) {
+  s3.listObjects({ Delimiter: "/" }, function(err, data) {
+    if (err) {
+      return alert("There was an error listing your albums: " + err.message);
+    } else {
+      var albums = data.CommonPrefixes.map(function(commonPrefix) {
+        var prefix = commonPrefix.Prefix;
+        var albumName = decodeURIComponent(prefix.replace("/", ""));
+        return getHtml([
+          "<li>",
+          "<span onclick=\"deleteAlbum('" + albumName + "')\">X</span>",
+          "<span onclick=\"viewAlbum('" + albumName + "')\">",
+          albumName,
+          "</span>",
+          "</li>"
+        ]);
+      });
+      var message = albums.length
+        ? getHtml([
+            "<p>Click on an album name to view it.</p>",
+            "<p>Click on the X to delete the album.</p>"
+          ])
+        : "<p>You do not have any albums. Please Create album.";
+      var htmlTemplate = [
+        "<h2>Albums</h2>",
+        message,
+        "<ul>",
+        getHtml(albums),
+        "</ul>",
+        "<button onclick=\"createAlbum(prompt('Enter Album Name:'))\">",
+        "Create New Album",
+        "</button>"
+      ];
+      cb(getHtml(htmlTemplate));
+    }
+  });
+}
+
+function addPhoto(albumName, files) {
+  if (!files.length) {
+    return alert("Please choose a file to upload first.");
+  }
+  var file = files[0];
+  var fileName = file.name;
+  var albumPhotosKey = encodeURIComponent(albumName) + "//";
+
+  var photoKey = albumPhotosKey + fileName;
+
+  // Use S3 ManagedUpload class as it supports multipart uploads
+  var upload = new S3.ManagedUpload({
+    params: {
+      Bucket: bucketName,
+      Key: photoKey,
+      Body: file,
+      ACL: "public-read"
+    }
+  });
+
+  var promise = upload.promise();
+
+  promise.then(
+    function(data) {
+      alert("Successfully uploaded photo.");
+      //viewAlbum(albumName);
+    },
+    function(err) {
+      return alert("There was an error uploading your photo: "+err.message);
+    }
+  );
+}
+
+function createAlbum(albumName) {
+  albumName = albumName.trim();
+  if (!albumName) {
+    return alert("Album names must contain at least one non-space character.");
+  }
+  if (albumName.indexOf("/") !== -1) {
+    return alert("Album names cannot contain slashes.");
+  }
+  var albumKey = encodeURIComponent(albumName) + "/";
+  s3.headObject({ Key: albumKey }, function(err, data) {
+    if (!err) {
+      return alert("Album already exists.");
+    }
+    if (err.code !== "NotFound") {
+      return alert("There was an error creating your album: " + err.message);
+    }
+    s3.putObject({ Key: albumKey }, function(err, data) {
+      if (err) {
+        return alert("There was an error creating your album: " + err.message);
+      }
+      alert("Successfully created album.");
+    });
+  });
+}
 const useEventListener = (
   target,
   eventName,
@@ -110,6 +285,7 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   //grid cell size
   const [cellSize, setCellSize] = useState(40);
   const [imageSources, setImageSources] = useState([]);
+  const [namespace, setNamespace] = useState('');
   useEffect(()=>{
     console.log('image sources:::', imageSources);
   }, [imageSources]);
@@ -213,9 +389,18 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
       <p>
         offset: {Math.floor(ox / cellSize) + ", " + Math.floor(oy / cellSize)}
       </p>
-      <button onClick={() => setListenToResize(!listeningToResize)}>
+      <button onClick={() => {
+        setListenToResize(!listeningToResize);
+        console.log('namespace to create:', namespace);
+        createAlbum(namespace);
+      }}>
         {listeningToResize ? "Ignore resize" : "Listen to resize"}
       </button>
+      <ProjectInput onChange={e=>{
+        const value = e.target.value;
+        console.log('value:', value);
+        setNamespace(value);
+      }}/>
       <ImageInput onChange={setImageSources}/>
       {imageSources.map((src, index) => {
         return <img key={'img'+index} src={src} alt="User uploaded"/>
@@ -308,7 +493,7 @@ type KanvasStudioProps = {
 const KanvasStudio = ({ className = "" }: KanvasStudioProps) => {
   className += " KanvasStudio";
   return (
-    <div className={className}>
+    <div className={className} id="app">
       <ToastContainer className="ToastContainer" />
       <Panel />
     </div>
