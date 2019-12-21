@@ -1,6 +1,6 @@
 // @flow
 
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState, useCallback, type ComponentType } from "react";
 import styled from "styled-components";
 import { ToastContainer } from "../components/ToastNotifications";
 import ImageInput from "../components/ImageInput";
@@ -10,7 +10,9 @@ import { window } from "ssr-window";
 import { throttle } from "throttle-debounce";
 import safelyCallAndSetState from "../utils/safelyCallAndSetState.js";
 import { snap, pointInput as registerPointEventListeners } from "../utils";
-//import { useLocalStorage } from "react-use";
+import { useLocalStorage } from "react-use";
+import S3 from 'aws-sdk/clients/s3';
+import envConfig from '../env.config.json';
 //import React, { useState, useEffect, useRef } from "react";
 //import styled, { withTheme } from "styled-components";
 //import { useMedia, useOnScreen } from "../utils/customHooks";
@@ -18,7 +20,8 @@ import { snap, pointInput as registerPointEventListeners } from "../utils";
 //import makeButtonStyles from "../utils/makeButtonStyles";
 //import ExternalLink from "../components/ExternalLink";
 //const uuid = require("uuid/v4");
-import S3 from 'aws-sdk/clients/s3';
+const accessKeyId = envConfig.AWS_CONFIG_KEY;
+const secretAccessKey = envConfig.AWS_CONFIG_SECRET;
 const origin = {
   x: 0,
   y: 0,
@@ -27,17 +30,18 @@ const origin = {
 const bucketName = 'massless.solutions';
 const s3config = {
   credentials: {
-    accessKeyId: process.env.AWS_CONFIG_ID,
-    secretAccessKey: process.env.AWS_CONFIG_SECRET,
+    accessKeyId,
+    secretAccessKey,
   },
   params: { Bucket: bucketName },
   region: 'eu-west-2',
   apiVersion: '2006-03-01'
 }
+console.log('s3 config', s3config);
 const s3 = new S3(s3config);
 function getHtml(template) {
-          return template.join('\n');
-       }
+        return template.join('\n');
+      }
 // function viewAlbum(albumName) {
 //   var albumPhotosKey = encodeURIComponent(albumName) + "//";
 //   s3.listObjects({ Prefix: albumPhotosKey }, function(err, data) {
@@ -268,7 +272,11 @@ class Drawer {
 //TODO: move intialSize into Orchestrator props
 const initialSize = { width: 300, height: 150 };
 const gridCellSizeDivisor = 40; //divisions per width/height
-const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
+type OrchestratorProps = {
+  className: string,
+  resizeThrottleDelay: number,
+}
+const Orchestrator = (styled(({ className = "", resizeThrottleDelay, }) => {
   className += " Orchestrator";
   //offset from origin (0, 0)
   const [{ ox, oy }, setOffset] = useState({ ox: 0, oy: 0 });
@@ -285,7 +293,7 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   //grid cell size
   const [cellSize, setCellSize] = useState(40);
   const [imageSources, setImageSources] = useState([]);
-  const [namespace, setNamespace] = useState('');
+  const [namespace, setNamespace] = useLocalStorage('');
   useEffect(()=>{
     console.log('image sources:::', imageSources);
   }, [imageSources]);
@@ -353,6 +361,7 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
   };
   return (
     <div className={className} ref={elOrchestrator}>
+      {namespace && <span className="hud">{namespace}</span>}
       <div className="OrchestratorCanvasContainer" ref={elCanvasContainer}>
         <Canvas
           className="OrchestratorCanvas"
@@ -396,7 +405,7 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
       }}>
         {listeningToResize ? "Ignore resize" : "Listen to resize"}
       </button>
-      <ProjectInput onChange={e=>{
+      <ProjectInput value={namespace} onChange={e=>{
         const value = e.target.value;
         console.log('value:', value);
         setNamespace(value);
@@ -407,7 +416,13 @@ const Orchestrator = ({ className = "", resizeThrottleDelay = 300 }) => {
       })}
     </div>
   );
-};
+})`
+  .hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+`: ComponentType<OrchestratorProps>);
 type CanvasProps = {
   className: string,
   width: number,
@@ -473,7 +488,7 @@ const Panel = styled(({ className = "" }) => {
   //const [coords, setCoords] = useState(origin);
   return (
     <div className={className}>
-      <Orchestrator className="PanelOrchestrator" />
+      <Orchestrator className="PanelOrchestrator" resizeThrottleDelay={300}/>
     </div>
   );
 })`

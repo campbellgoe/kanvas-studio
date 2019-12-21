@@ -2,13 +2,14 @@
   "name": "kanvas-studio",
   "version": "0.0.0",
   "scripts": {
-    "dev": "yarn run flow && node server.js",
-    "build": "yarn run flow && next build",
+    "dev": "yarn run build:env && yarn run flow && node server.js",
+    "build": "yarn run build:env && yarn run flow && next build",
     "start": "yarn run flow && cross-env NODE_ENV=production node server.js",
     "siege": "siege -c255 -t1M http://localhost:4424",
     "set:env": "bash bin/set.env.sh",
     "flow-typed": "flow-typed",
-    "install": "npx flow-typed install styled-components@^4.0.0"
+    "install": "npx flow-typed install styled-components@^4.0.0",
+    "build:env": "node bin/parse.env.js .env > env.config.json"
   },
   "dependencies": {
     "aws-sdk": "^2.594.0",
