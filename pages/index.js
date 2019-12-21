@@ -1,18 +1,24 @@
 // @flow
 
-import React, { useRef, useEffect, useState, useCallback, type ComponentType } from "react";
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  useCallback,
+  type ComponentType
+} from "react";
 import styled from "styled-components";
 import { ToastContainer } from "../components/ToastNotifications";
 import ImageInput from "../components/ImageInput";
-import ProjectInput from '../components/ProjectInput';
+import ProjectInput from "../components/ProjectInput";
 import { window } from "ssr-window";
 //import useEventListener from '@toolia/use-event-listener';
 import { throttle } from "throttle-debounce";
 import safelyCallAndSetState from "../utils/safelyCallAndSetState.js";
 import { snap, pointInput as registerPointEventListeners } from "../utils";
 import { useLocalStorage } from "react-use";
-import S3 from 'aws-sdk/clients/s3';
-import envConfig from '../env.config.json';
+import S3 from "aws-sdk/clients/s3";
+import envConfig from "../env.config.json";
 //import React, { useState, useEffect, useRef } from "react";
 //import styled, { withTheme } from "styled-components";
 //import { useMedia, useOnScreen } from "../utils/customHooks";
@@ -27,21 +33,21 @@ const origin = {
   y: 0,
   z: 0
 };
-const bucketName = 'massless.solutions';
+const bucketName = "massless.solutions";
 const s3config = {
   credentials: {
     accessKeyId,
-    secretAccessKey,
+    secretAccessKey
   },
   params: { Bucket: bucketName },
-  region: 'eu-west-2',
-  apiVersion: '2006-03-01'
-}
-console.log('s3 config', s3config);
+  region: "eu-west-2",
+  apiVersion: "2006-03-01"
+};
+console.log("s3 config", s3config);
 const s3 = new S3(s3config);
 function getHtml(template) {
-        return template.join('\n');
-      }
+  return template.join("\n");
+}
 // function viewAlbum(albumName) {
 //   var albumPhotosKey = encodeURIComponent(albumName) + "//";
 //   s3.listObjects({ Prefix: albumPhotosKey }, function(err, data) {
@@ -112,35 +118,13 @@ function listAlbums(cb) {
     if (err) {
       return alert("There was an error listing your albums: " + err.message);
     } else {
-      var albums = data.CommonPrefixes.map(function(commonPrefix) {
+      console.log("data:..", data);
+      const albums = data.CommonPrefixes.map(function(commonPrefix) {
         var prefix = commonPrefix.Prefix;
         var albumName = decodeURIComponent(prefix.replace("/", ""));
-        return getHtml([
-          "<li>",
-          "<span onclick=\"deleteAlbum('" + albumName + "')\">X</span>",
-          "<span onclick=\"viewAlbum('" + albumName + "')\">",
-          albumName,
-          "</span>",
-          "</li>"
-        ]);
+        return albumName;
       });
-      var message = albums.length
-        ? getHtml([
-            "<p>Click on an album name to view it.</p>",
-            "<p>Click on the X to delete the album.</p>"
-          ])
-        : "<p>You do not have any albums. Please Create album.";
-      var htmlTemplate = [
-        "<h2>Albums</h2>",
-        message,
-        "<ul>",
-        getHtml(albums),
-        "</ul>",
-        "<button onclick=\"createAlbum(prompt('Enter Album Name:'))\">",
-        "Create New Album",
-        "</button>"
-      ];
-      cb(getHtml(htmlTemplate));
+      cb(albums);
     }
   });
 }
@@ -173,12 +157,12 @@ function addPhoto(albumName, files) {
       //viewAlbum(albumName);
     },
     function(err) {
-      return alert("There was an error uploading your photo: "+err.message);
+      return alert("There was an error uploading your photo: " + err.message);
     }
   );
 }
 
-function createAlbum(albumName) {
+function createAlbum(albumName, cb) {
   albumName = albumName.trim();
   if (!albumName) {
     return alert("Album names must contain at least one non-space character.");
@@ -199,6 +183,7 @@ function createAlbum(albumName) {
         return alert("There was an error creating your album: " + err.message);
       }
       alert("Successfully created album.");
+      cb(data);
     });
   });
 }
@@ -274,9 +259,9 @@ const initialSize = { width: 300, height: 150 };
 const gridCellSizeDivisor = 40; //divisions per width/height
 type OrchestratorProps = {
   className: string,
-  resizeThrottleDelay: number,
-}
-const Orchestrator = (styled(({ className = "", resizeThrottleDelay, }) => {
+  resizeThrottleDelay: number
+};
+const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
   className += " Orchestrator";
   //offset from origin (0, 0)
   const [{ ox, oy }, setOffset] = useState({ ox: 0, oy: 0 });
@@ -293,9 +278,16 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay, }) => {
   //grid cell size
   const [cellSize, setCellSize] = useState(40);
   const [imageSources, setImageSources] = useState([]);
-  const [namespace, setNamespace] = useLocalStorage('');
-  useEffect(()=>{
-    console.log('image sources:::', imageSources);
+  const [namespace, setNamespace] = useLocalStorage(
+    "kanvas-studio-namespace",
+    ""
+  );
+  const [liveNamespaces, setLiveNamespaces] = useState([]);
+  useEffect(() => {
+    listAlbums(setLiveNamespaces);
+  }, []);
+  useEffect(() => {
+    console.log("image sources:::", imageSources);
   }, [imageSources]);
   const elOrchestrator = useRef(null);
   const elCanvasContainer = useRef(null);
@@ -361,7 +353,15 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay, }) => {
   };
   return (
     <div className={className} ref={elOrchestrator}>
-      {namespace && <span className="hud">{namespace}</span>}
+      <div className="hud">
+        {namespace && (
+          <span className="hud-item">Current namespace: {namespace}</span>
+        )}
+        {liveNamespaces &&
+          liveNamespaces.map(namespace => {
+            return <span className="hud-item">{namespace}</span>;
+          })}
+      </div>
       <div className="OrchestratorCanvasContainer" ref={elCanvasContainer}>
         <Canvas
           className="OrchestratorCanvas"
@@ -398,21 +398,29 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay, }) => {
       <p>
         offset: {Math.floor(ox / cellSize) + ", " + Math.floor(oy / cellSize)}
       </p>
-      <button onClick={() => {
-        setListenToResize(!listeningToResize);
-        console.log('namespace to create:', namespace);
-        createAlbum(namespace);
-      }}>
+      <button
+        onClick={() => {
+          setListenToResize(!listeningToResize);
+        }}
+      >
         {listeningToResize ? "Ignore resize" : "Listen to resize"}
       </button>
-      <ProjectInput value={namespace} onChange={e=>{
-        const value = e.target.value;
-        console.log('value:', value);
-        setNamespace(value);
-      }}/>
-      <ImageInput onChange={setImageSources}/>
+      <ProjectInput
+        value={namespace}
+        onChange={e => {
+          const value = e.target.value;
+          console.log("value:", value);
+          setNamespace(value);
+        }}
+      />
+      <button onClick={()=>{
+        createAlbum(namespace, () => {
+          listAlbums(setLiveNamespaces);
+        });
+      }}>Create namespace</button>
+      <ImageInput onChange={setImageSources} />
       {imageSources.map((src, index) => {
-        return <img key={'img'+index} src={src} alt="User uploaded"/>
+        return <img key={"img" + index} src={src} alt="User uploaded" />;
       })}
     </div>
   );
@@ -421,6 +429,8 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay, }) => {
     position: absolute;
     top: 0;
     left: 0;
+    display: flex;
+    flex-direction: column;
   }
 `: ComponentType<OrchestratorProps>);
 type CanvasProps = {
@@ -488,7 +498,7 @@ const Panel = styled(({ className = "" }) => {
   //const [coords, setCoords] = useState(origin);
   return (
     <div className={className}>
-      <Orchestrator className="PanelOrchestrator" resizeThrottleDelay={300}/>
+      <Orchestrator className="PanelOrchestrator" resizeThrottleDelay={300} />
     </div>
   );
 })`
