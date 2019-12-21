@@ -131,16 +131,16 @@ function listAlbums(cb) {
   });
 }
 
-function addPhoto(albumName, {files, filesAsImgProps}) {
+function addPhoto(albumName, { files, filesAsImgProps }) {
   if (!files.length) {
     return alert("Please choose a file to upload first.");
   }
   var file = files[0];
- 
+
   var albumPhotosKey = encodeURIComponent(albumName) + "/";
 
   var photoKey = albumPhotosKey + file.name;
-  console.log('file to send:', file);
+  console.log("file to send:", file);
   // Use S3 ManagedUpload class as it supports multipart uploads
   const s3 = new S3({
     ...s3config,
@@ -365,16 +365,22 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
     <div className={className} ref={elOrchestrator}>
       <div className="hud">
         {namespace && (
-          <span className="hud-item">Current namespace: {namespace}</span>
+          <span className="hud-item">Local namespace: {namespace}</span>
         )}
-        {liveNamespaces &&
-          liveNamespaces.map((namespace, index) => {
-            return (
-              <span key={namespace + index} className="hud-item">
-                {namespace}
-              </span>
-            );
-          })}
+        {liveNamespaces && (
+          <div>
+            <label>Remote namespaces:</label>
+            <ul>
+              {liveNamespaces.map((namespace, index) => {
+                return (
+                  <li key={namespace + index} className="hud-item">
+                    {namespace}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
       <div className="OrchestratorCanvasContainer" ref={elCanvasContainer}>
         <Canvas
@@ -420,11 +426,9 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
         {listeningToResize ? "Ignore resize" : "Listen to resize"}
       </button>
       <ProjectInput
-        value={namespace}
-        onChange={e => {
-          const value = e.target.value;
-          console.log("value:", value);
-          setNamespace(value);
+        namespace={namespace}
+        onApplyChanges={({ namespace }) => {
+          setNamespace(namespace);
         }}
       />
       <button
@@ -441,14 +445,14 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
       <ImageInput
         onChange={({ filesAsImgProps, files }) => {
           setFilesAsImgProps(filesAsImgProps);
-          addPhoto(namespace, {files, filesAsImgProps});
+          addPhoto(namespace, { files, filesAsImgProps });
         }}
       />
       {filesAsImgProps.map(({ src, filename }, index) => {
         return (
-          <div>
+          <div key={src + index}>
             <p>{filename}</p>
-            <img key={"img" + index} src={src} alt="User uploaded" />
+            <img src={src} alt="User uploaded" />
           </div>
         );
       })}
@@ -545,7 +549,7 @@ const Panel = styled(({ className = "" }) => {
 type KanvasStudioProps = {
   className: string
 };
-const KanvasStudio = ({ className = "" }: KanvasStudioProps) => {
+const KanvasStudio = (styled(({ className = "" }) => {
   className += " KanvasStudio";
   return (
     <div className={className} id="app">
@@ -553,5 +557,14 @@ const KanvasStudio = ({ className = "" }: KanvasStudioProps) => {
       <Panel />
     </div>
   );
-};
+})`
+  box-sizing: border-box;
+  font-size: 14px;
+  button,
+  input {
+    padding: 12px;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+`: ComponentType<KanvasStudioProps>);
 export default KanvasStudio;

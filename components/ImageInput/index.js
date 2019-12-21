@@ -56,5 +56,6 @@ const ImageInputStyled = (styled(ImageInput)`
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  margin-top: 16px;
 `: ComponentType<ImageInputProps>);
 export default ImageInputStyled;
