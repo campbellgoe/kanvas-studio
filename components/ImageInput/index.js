@@ -12,7 +12,11 @@ function handleFiles(files) {
   for(let file of files){
     //skip non image files
     if (!file.type.startsWith('image/')){ continue; }
-    outputFiles.push(URL.createObjectURL(file));
+    console.log('handling file..', file);
+    outputFiles.push({
+      src: URL.createObjectURL(file),
+      filename: file.name,
+    });
   }
   return outputFiles;
   // for (let i = 0; i < files.length; i++) {
@@ -38,8 +42,9 @@ const ImageInput = (({ className = '', showButton = true, onChange }) => {
         <>
           <label>Upload image</label>
           <input type="file" name="myImage" accept="image/*" onChange={e=>{
-            const srcs = handleFiles(e.target.files);
-            onChange(srcs);
+            const files = e.target.files;
+            const filesAsImgProps = handleFiles(files);
+            onChange({ filesAsImgProps, files});
           }}/>
         </>
       )}

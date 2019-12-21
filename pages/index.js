@@ -112,52 +112,62 @@ function getHtml(template) {
 //     viewAlbum(albumName);
 //   });
 // }
-
+function getAlbumNamesFromResponse(data) {
+  const albums = data.CommonPrefixes.map(function(commonPrefix) {
+    var prefix = commonPrefix.Prefix;
+    var albumName = decodeURIComponent(prefix.replace("/", ""));
+    return albumName;
+  });
+  return albums;
+}
 function listAlbums(cb) {
   s3.listObjects({ Delimiter: "/" }, function(err, data) {
     if (err) {
       return alert("There was an error listing your albums: " + err.message);
     } else {
-      console.log("data:..", data);
-      const albums = data.CommonPrefixes.map(function(commonPrefix) {
-        var prefix = commonPrefix.Prefix;
-        var albumName = decodeURIComponent(prefix.replace("/", ""));
-        return albumName;
-      });
+      const albums = getAlbumNamesFromResponse(data);
       cb(albums);
     }
   });
 }
 
-function addPhoto(albumName, files) {
+function addPhoto(albumName, {files, filesAsImgProps}) {
   if (!files.length) {
     return alert("Please choose a file to upload first.");
   }
   var file = files[0];
-  var fileName = file.name;
-  var albumPhotosKey = encodeURIComponent(albumName) + "//";
+ 
+  var albumPhotosKey = encodeURIComponent(albumName) + "/";
 
-  var photoKey = albumPhotosKey + fileName;
-
+  var photoKey = albumPhotosKey + file.name;
+  console.log('file to send:', file);
   // Use S3 ManagedUpload class as it supports multipart uploads
-  var upload = new S3.ManagedUpload({
-    params: {
-      Bucket: bucketName,
-      Key: photoKey,
-      Body: file,
-      ACL: "public-read"
+  const s3 = new S3({
+    ...s3config,
+    ...{
+      params: {
+        Bucket: bucketName,
+        Key: photoKey,
+        Body: file,
+        ACL: "public-read"
+      }
     }
   });
-
-  var promise = upload.promise();
-
-  promise.then(
-    function(data) {
-      alert("Successfully uploaded photo.");
-      //viewAlbum(albumName);
+  s3.upload(
+    {
+      params: {
+        Bucket: bucketName,
+        Key: photoKey,
+        Body: file,
+        ACL: "public-read"
+      }
     },
-    function(err) {
-      return alert("There was an error uploading your photo: " + err.message);
+    (err, data) => {
+      if (!err && data) {
+        alert("Successfully uploaded photo.");
+      } else {
+        alert("Error:" + err);
+      }
     }
   );
 }
@@ -277,7 +287,7 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
   const [frame, setFrame] = useState(0);
   //grid cell size
   const [cellSize, setCellSize] = useState(40);
-  const [imageSources, setImageSources] = useState([]);
+  const [filesAsImgProps, setFilesAsImgProps] = useState([]);
   const [namespace, setNamespace] = useLocalStorage(
     "kanvas-studio-namespace",
     ""
@@ -287,8 +297,8 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
     listAlbums(setLiveNamespaces);
   }, []);
   useEffect(() => {
-    console.log("image sources:::", imageSources);
-  }, [imageSources]);
+    console.log("image sources:::", filesAsImgProps);
+  }, [filesAsImgProps]);
   const elOrchestrator = useRef(null);
   const elCanvasContainer = useRef(null);
   const throttledGetWindowSize = useCallback(
@@ -358,8 +368,12 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
           <span className="hud-item">Current namespace: {namespace}</span>
         )}
         {liveNamespaces &&
-          liveNamespaces.map(namespace => {
-            return <span className="hud-item">{namespace}</span>;
+          liveNamespaces.map((namespace, index) => {
+            return (
+              <span key={namespace + index} className="hud-item">
+                {namespace}
+              </span>
+            );
           })}
       </div>
       <div className="OrchestratorCanvasContainer" ref={elCanvasContainer}>
@@ -413,14 +427,30 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
           setNamespace(value);
         }}
       />
-      <button onClick={()=>{
-        createAlbum(namespace, () => {
-          listAlbums(setLiveNamespaces);
-        });
-      }}>Create namespace</button>
-      <ImageInput onChange={setImageSources} />
-      {imageSources.map((src, index) => {
-        return <img key={"img" + index} src={src} alt="User uploaded" />;
+      <button
+        onClick={() => {
+          createAlbum(namespace, data => {
+            console.log("created album, data:", data);
+            listAlbums(setLiveNamespaces);
+            //const albums = getAlbumNamesFromResponse(data);
+          });
+        }}
+      >
+        Create namespace
+      </button>
+      <ImageInput
+        onChange={({ filesAsImgProps, files }) => {
+          setFilesAsImgProps(filesAsImgProps);
+          addPhoto(namespace, {files, filesAsImgProps});
+        }}
+      />
+      {filesAsImgProps.map(({ src, filename }, index) => {
+        return (
+          <div>
+            <p>{filename}</p>
+            <img key={"img" + index} src={src} alt="User uploaded" />
+          </div>
+        );
       })}
     </div>
   );
