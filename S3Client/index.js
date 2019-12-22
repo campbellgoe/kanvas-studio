@@ -25,7 +25,7 @@ const s3 = new S3(s3config);
 //   var bucketFolderPhotosKey = encodeURIComponent(bucketFolderName) + "//";
 //   s3.listObjects({ Prefix: bucketFolderPhotosKey }, function(err, data) {
 //     if (err) {
-//       return alert("There was an error viewing your bucketFolder: " + err.message);
+//       return console.warn("There was an error viewing your bucketFolder: " + err.message);
 //     }
 //     // 'this' references the AWS.Response instance that represents the response
 //     var href = this.request.httpRequest.endpoint.href;
@@ -79,9 +79,9 @@ const s3 = new S3(s3config);
 // function deletePhoto(bucketFolderName, photoKey) {
 //   s3.deleteObject({ Key: photoKey }, function(err, data) {
 //     if (err) {
-//       return alert("There was an error deleting your photo: ", err.message);
+//       return console.warn("There was an error deleting your photo: ", err.message);
 //     }
-//     alert("Successfully deleted photo.");
+//     console.warn("Successfully deleted photo.");
 //     viewBucketFolder(bucketFolderName);
 //   });
 // }
@@ -96,7 +96,7 @@ function getBucketFolderNamesFromResponse(data) {
 function listBucketFolders(cb) {
   s3.listObjects({ Delimiter: "/" }, function(err, data) {
     if (err) {
-      return alert(
+      return console.warn(
         "There was an error listing your bucketFolders: " + err.message
       );
     } else {
@@ -106,10 +106,9 @@ function listBucketFolders(cb) {
   });
 }
 
-
 function uploadFile(bucketFolderName, { files, filesAsImgProps }) {
   if (!files.length) {
-    return alert("Please choose a file to upload first.");
+    return console.warn("Please choose a file to upload first.");
   }
   var file = files[0];
 
@@ -140,9 +139,9 @@ function uploadFile(bucketFolderName, { files, filesAsImgProps }) {
     },
     (err, data) => {
       if (!err && data) {
-        alert("Successfully uploaded photo.");
+        console.warn("Successfully uploaded photo.");
       } else {
-        alert("Error:" + err);
+        console.warn("Error:" + err);
       }
     }
   );
@@ -151,30 +150,30 @@ function uploadFile(bucketFolderName, { files, filesAsImgProps }) {
 function createBucketFolder(bucketFolderName, cb) {
   bucketFolderName = bucketFolderName.trim();
   if (!bucketFolderName) {
-    return alert(
+    return console.warn(
       "BucketFolder names must contain at least one non-space character."
     );
   }
   if (bucketFolderName.indexOf("/") !== -1) {
-    return alert("BucketFolder names cannot contain slashes.");
+    return console.warn("BucketFolder names cannot contain slashes.");
   }
   var bucketFolderKey = encodeURIComponent(bucketFolderName) + "/";
   s3.headObject({ Key: bucketFolderKey }, function(err, data) {
     if (!err) {
-      return alert("BucketFolder already exists.");
+      return console.warn("BucketFolder already exists.");
     }
     if (err.code !== "NotFound") {
-      return alert(
+      return console.warn(
         "There was an error creating your bucketFolder: " + err.message
       );
     }
     s3.putObject({ Key: bucketFolderKey }, function(err, data) {
       if (err) {
-        return alert(
+        return console.warn(
           "There was an error creating your bucketFolder: " + err.message
         );
       }
-      alert("Successfully created bucketFolder.");
+      console.warn("Successfully created bucketFolder.");
       cb(data);
     });
   });
