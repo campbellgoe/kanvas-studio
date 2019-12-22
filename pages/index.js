@@ -16,6 +16,7 @@ import { window } from "ssr-window";
 import { throttle } from "throttle-debounce";
 import safelyCallAndSetState from "../utils/safelyCallAndSetState.js";
 import { snap, pointInput as registerPointEventListeners } from "../utils";
+import { useMakeClassInstance } from '../hooks';
 import { useLocalStorage } from "react-use";
 import S3 from "aws-sdk/clients/s3";
 import envConfig from "../env.config.json";
@@ -26,6 +27,10 @@ import envConfig from "../env.config.json";
 //import makeButtonStyles from "../utils/makeButtonStyles";
 //import ExternalLink from "../components/ExternalLink";
 //const uuid = require("uuid/v4");
+const syncEnabledInitially = false;
+const msPerFrame = 30;
+const secondsPerSync = 60; //this makes api call to AWS, so be careful not to set it too low.
+const minSecondsPerSync = 5; //in case a user does many actions in a short time, the minimum is this.
 const accessKeyId = envConfig.AWS_CONFIG_KEY;
 const secretAccessKey = envConfig.AWS_CONFIG_SECRET;
 const origin = {
@@ -48,11 +53,11 @@ const s3 = new S3(s3config);
 function getHtml(template) {
   return template.join("\n");
 }
-// function viewAlbum(albumName) {
-//   var albumPhotosKey = encodeURIComponent(albumName) + "//";
-//   s3.listObjects({ Prefix: albumPhotosKey }, function(err, data) {
+// function viewBucketFolder(bucketFolderName) {
+//   var bucketFolderPhotosKey = encodeURIComponent(bucketFolderName) + "//";
+//   s3.listObjects({ Prefix: bucketFolderPhotosKey }, function(err, data) {
 //     if (err) {
-//       return alert("There was an error viewing your album: " + err.message);
+//       return alert("There was an error viewing your bucketFolder: " + err.message);
 //     }
 //     // 'this' references the AWS.Response instance that represents the response
 //     var href = this.request.httpRequest.endpoint.href;
@@ -68,14 +73,14 @@ function getHtml(template) {
 //         "</div>",
 //         "<div>",
 //         "<span onclick=\"deletePhoto('" +
-//           albumName +
+//           bucketFolderName +
 //           "','" +
 //           photoKey +
 //           "')\">",
 //         "X",
 //         "</span>",
 //         "<span>",
-//         photoKey.replace(albumPhotosKey, ""),
+//         photoKey.replace(bucketFolderPhotosKey, ""),
 //         "</span>",
 //         "</div>",
 //         "</span>"
@@ -83,63 +88,70 @@ function getHtml(template) {
 //     });
 //     var message = photos.length
 //       ? "<p>Click on the X to delete the photo</p>"
-//       : "<p>You do not have any photos in this album. Please add photos.</p>";
+//       : "<p>You do not have any photos in this bucketFolder. Please add photos.</p>";
 //     var htmlTemplate = [
 //       "<h2>",
-//       "Album: " + albumName,
+//       "BucketFolder: " + bucketFolderName,
 //       "</h2>",
 //       message,
 //       "<div>",
 //       getHtml(photos),
 //       "</div>",
 //       '<input id="photoupload" type="file" accept="image/*">',
-//       '<button id="addphoto" onclick="addPhoto(\'' + albumName + "')\">",
+//       '<button id="addphoto" onclick="addPhoto(\'' + bucketFolderName + "')\">",
 //       "Add Photo",
 //       "</button>",
-//       '<button onclick="listAlbums()">',
-//       "Back To Albums",
+//       '<button onclick="listBucketFolders()">',
+//       "Back To BucketFolders",
 //       "</button>"
 //     ];
 //     document.getElementById("app").innerHTML = getHtml(htmlTemplate);
 //   });
 // }
-// function deletePhoto(albumName, photoKey) {
+// function deletePhoto(bucketFolderName, photoKey) {
 //   s3.deleteObject({ Key: photoKey }, function(err, data) {
 //     if (err) {
 //       return alert("There was an error deleting your photo: ", err.message);
 //     }
 //     alert("Successfully deleted photo.");
-//     viewAlbum(albumName);
+//     viewBucketFolder(bucketFolderName);
 //   });
 // }
-function getAlbumNamesFromResponse(data) {
-  const albums = data.CommonPrefixes.map(function(commonPrefix) {
+function getBucketFolderNamesFromResponse(data) {
+  const bucketFolders = data.CommonPrefixes.map(function(commonPrefix) {
     var prefix = commonPrefix.Prefix;
-    var albumName = decodeURIComponent(prefix.replace("/", ""));
-    return albumName;
+    var bucketFolderName = decodeURIComponent(prefix.replace("/", ""));
+    return bucketFolderName;
   });
-  return albums;
+  return bucketFolders;
 }
-function listAlbums(cb) {
+function listBucketFolders(cb) {
   s3.listObjects({ Delimiter: "/" }, function(err, data) {
     if (err) {
-      return alert("There was an error listing your albums: " + err.message);
+      return alert(
+        "There was an error listing your bucketFolders: " + err.message
+      );
     } else {
-      const albums = getAlbumNamesFromResponse(data);
-      cb(albums);
+      const bucketFolders = getBucketFolderNamesFromResponse(data);
+      cb(bucketFolders);
     }
   });
 }
+//don't update less than every 30 seconds
+const throttledListBucketFolders = throttle(
+  1000 * minSecondsPerSync,
+  listBucketFolders
+);
 
-function addPhoto(albumName, { files, filesAsImgProps }) {
+function addPhoto(bucketFolderName, { files, filesAsImgProps }) {
   if (!files.length) {
     return alert("Please choose a file to upload first.");
   }
   var file = files[0];
 
-  var albumPhotosKey = encodeURIComponent(albumName) + "/";
+  var bucketFolderPhotosKey = encodeURIComponent(bucketFolderName) + "/";
 
-  var photoKey = albumPhotosKey + file.name;
+  var photoKey = bucketFolderPhotosKey + file.name;
   console.log("file to send:", file);
   // Use S3 ManagedUpload class as it supports multipart uploads
   const s3 = new S3({
@@ -172,27 +184,33 @@ function addPhoto(albumName, { files, filesAsImgProps }) {
   );
 }
 
-function createAlbum(albumName, cb) {
-  albumName = albumName.trim();
-  if (!albumName) {
-    return alert("Album names must contain at least one non-space character.");
+function createBucketFolder(bucketFolderName, cb) {
+  bucketFolderName = bucketFolderName.trim();
+  if (!bucketFolderName) {
+    return alert(
+      "BucketFolder names must contain at least one non-space character."
+    );
   }
-  if (albumName.indexOf("/") !== -1) {
-    return alert("Album names cannot contain slashes.");
+  if (bucketFolderName.indexOf("/") !== -1) {
+    return alert("BucketFolder names cannot contain slashes.");
   }
-  var albumKey = encodeURIComponent(albumName) + "/";
-  s3.headObject({ Key: albumKey }, function(err, data) {
+  var bucketFolderKey = encodeURIComponent(bucketFolderName) + "/";
+  s3.headObject({ Key: bucketFolderKey }, function(err, data) {
     if (!err) {
-      return alert("Album already exists.");
+      return alert("BucketFolder already exists.");
     }
     if (err.code !== "NotFound") {
-      return alert("There was an error creating your album: " + err.message);
+      return alert(
+        "There was an error creating your bucketFolder: " + err.message
+      );
     }
-    s3.putObject({ Key: albumKey }, function(err, data) {
+    s3.putObject({ Key: bucketFolderKey }, function(err, data) {
       if (err) {
-        return alert("There was an error creating your album: " + err.message);
+        return alert(
+          "There was an error creating your bucketFolder: " + err.message
+        );
       }
-      alert("Successfully created album.");
+      alert("Successfully created bucketFolder.");
       cb(data);
     });
   });
@@ -264,6 +282,103 @@ class Drawer {
     this.line(x - r, y, x + r, y);
   }
 }
+const makeCallAndSetTimestamp = (fn, setTimestamp) => {
+  return () => {
+    console.log('sync and set timestamp');
+    fn();
+    setTimestamp(Date.now());
+  }
+};
+const makeGetRelativeToTimestamp = () => {
+  // Create a relative time formatter in your locale
+  // with default values explicitly passed in.
+  if(!window.Intl){
+    return (fn?: number) => 'Unknown';
+  }
+  const rtf = new window.Intl.RelativeTimeFormat("en", {
+      localeMatcher: "best fit", // other values: "lookup"
+      numeric: "auto", // other values: "auto"
+      style: "long", // other values: "short" or "narrow"
+  });
+  return (timestampToCompare?: number = Date.now()) => {
+    const timeDifference = timestampToCompare-Date.now();
+    const isWithinMinute = Math.abs(timeDifference) < 60;
+    let formatIn = 'second';
+    //if it's more than a minute difference, display in either minutes or hours
+    if(!isWithinMinute){
+      const isWithinHour = Math.abs(timeDifference) < 60*60;
+      if(isWithinHour){
+        //is >= 1 minute && <= 1 hour
+        formatIn = 'minute';
+      } else {
+        //is >= 1 hour
+        formatIn = 'hour';
+      }
+    }
+    if(isWithinMinute)
+    rtf.format(timeDifference, isWithinMinute ? "second" : "minute");
+  }
+}
+const getRelativeTime = makeGetRelativeToTimestamp();
+const parseSyncTimestamp = (timestampOfPreviousSync: number | string) => {
+  if (typeof timestampOfPreviousSync == "string") return timestampOfPreviousSync;
+  //TODO: use Intl.relative...
+  return getRelativeTime(timestampOfPreviousSync);
+};
+const Sync = ({
+  syncFn,
+  syncInitially
+}: {
+  syncFn: function,
+  syncInitially: boolean
+}) => {
+  const [syncEnabled, setSyncEnabled] = useState(syncEnabledInitially);
+  //an array in case a race condition causes multiple intervals to be set
+  //and therefore ensure all intervals are able to be cleared
+  const [syncIntervalIds, setSyncIntervalIds] = useState([]);
+  const [prevSyncTime, setPrevSyncTime] = useState("Never");
+
+  const sync: function = makeCallAndSetTimestamp(syncFn, setPrevSyncTime);
+
+  useEffect(() => {
+    if (syncInitially) {
+      sync();
+    }
+  }, []);
+  return (
+    <div>
+      <button
+        onClick={() => {
+          setSyncEnabled(syncEnabled => {
+            if (!syncEnabled) {
+              //set sync interval
+              //initial sync call
+              sync();
+              const syncIntervalId = setInterval(() => {
+                sync();
+              }, secondsPerSync * 1000);
+              setSyncIntervalIds(ids => [...ids, syncIntervalId]);
+            } else {
+              //clear sync interval
+              setSyncIntervalIds(ids => {
+                ids.forEach(id => clearInterval(id));
+                return [];
+              });
+            }
+            return !syncEnabled;
+          });
+        }}
+      >
+        {syncEnabled ? "Disable sync" : "Enable sync"}
+      </button>
+      {syncEnabled && (
+        <p>Warning: sync is enabled. This will cost money if left running.</p>
+      )}
+      <p>Last sync: {parseSyncTimestamp(prevSyncTime)}</p>
+    </div>
+  );
+};
+
 //TODO: move intialSize into Orchestrator props
 const initialSize = { width: 300, height: 150 };
 const gridCellSizeDivisor = 40; //divisions per width/height
@@ -292,10 +407,12 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
     "kanvas-studio-namespace",
     ""
   );
+
   const [liveNamespaces, setLiveNamespaces] = useState([]);
-  useEffect(() => {
-    listAlbums(setLiveNamespaces);
-  }, []);
+  const syncFn = () => {
+    //set namespaces listed in the S3 bucket
+    throttledListBucketFolders(setLiveNamespaces);
+  };
   useEffect(() => {
     console.log("image sources:::", filesAsImgProps);
   }, [filesAsImgProps]);
@@ -336,7 +453,7 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
   useEffect(() => {
     setTimeout(() => {
       setFrame(frame + 1);
-    }, 30);
+    }, msPerFrame);
   }, [frame]);
   useEffect(() => {
     //console.log('pointer:', pointer);
@@ -433,15 +550,16 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
       />
       <button
         onClick={() => {
-          createAlbum(namespace, data => {
-            console.log("created album, data:", data);
-            listAlbums(setLiveNamespaces);
-            //const albums = getAlbumNamesFromResponse(data);
+          createBucketFolder(namespace, data => {
+            console.log("created bucketFolder, data:", data);
+            syncFn();
+            //const bucketFolders = getBucketFolderNamesFromResponse(data);
           });
         }}
       >
         Create namespace
       </button>
+      <Sync syncFn={syncFn} syncInitially={true} />
       <ImageInput
         onChange={({ filesAsImgProps, files }) => {
           setFilesAsImgProps(filesAsImgProps);
@@ -475,7 +593,6 @@ type CanvasProps = {
   animationFrameDrawFn: function,
   frame: number
 };
-
 const Canvas = styled(
   ({
     className = "",
@@ -491,12 +608,7 @@ const Canvas = styled(
     const drawRef = useRef(null);
     const [draw, setDraw] = useState(null);
     const [setupData, setSetupData] = useState(null);
-    function getDrawer(ctx) {
-      if (drawRef.current === null) {
-        drawRef.current = new Drawer(ctx);
-      }
-      return drawRef.current;
-    }
+    const getDrawer = useMakeClassInstance(drawRef, Drawer);
 
     //initially get canvas, context, and draw.
     useEffect(() => {
