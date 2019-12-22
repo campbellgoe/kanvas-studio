@@ -290,7 +290,29 @@ class Drawer {
     this.line(x - r, y, x + r, y);
   }
 }
-
+const formatRelativeTime = (rtf, prevSyncTime) => {
+  let diffInSeconds = ((prevSyncTime - Date.now())/1000);
+  const absDiff = Math.abs(diffInSeconds);
+  let outputDiff = Math.ceil(diffInSeconds);
+  let outputFormat;
+  if(absDiff < 1){
+    //sub second
+    outputDiff = diffInSeconds;
+  }
+  if(absDiff < 60){
+    outputFormat = 'second';
+  } else if(absDiff < 60*60){
+    outputFormat = 'minute';
+    outputDiff = Math.ceil(outputDiff/60);
+  } else if(absDiff < 60*60*24){
+    outputFormat = 'hour';
+    outputDiff = Math.ceil(outputDiff/(60*60));
+  } else {
+    outputFormat = 'day';
+    outputDiff = Math.ceil(outputDiff/(60*60*24));
+  }
+  return rtf.format(outputDiff, outputFormat);
+}
 const Sync = ({
   //what user wants to run when sync
   onSync,
@@ -349,7 +371,7 @@ const Sync = ({
       {syncEnabled && (
         <p>Warning: sync is enabled. This will cost money if left running.</p>
       )}
-      <p>Last sync: {typeof prevSyncTime == 'string' ? prevSyncTime : rtf.format(Math.round((prevSyncTime - Date.now())/1000), "second")}</p>
+      <p>Last sync: {typeof prevSyncTime == 'string' ? prevSyncTime : formatRelativeTime(rtf, prevSyncTime)}</p>
     </div>
   );
 };
