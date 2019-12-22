@@ -1,6 +1,6 @@
 import React from "react";
 import styled from "styled-components";
-import { useStateValue } from "../../utils/state";
+import { useStateValue } from "../../utils/useStateValue";
 import getBoxShadow from "../../utils/getBoxShadow";
 import svgIcons from "../../svg/icons";
 const {

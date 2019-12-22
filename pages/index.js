@@ -20,6 +20,14 @@ import { useMakeClassInstance } from '../hooks';
 import { useLocalStorage } from "react-use";
 import S3 from "aws-sdk/clients/s3";
 import envConfig from "../env.config.json";
+
+import RelativeTimeFormat from "relative-time-format"
+import en from "relative-time-format/locale/en.json"
+ 
+RelativeTimeFormat.addLocale(en)
+
+
+
 //import React, { useState, useEffect, useRef } from "react";
 //import styled, { withTheme } from "styled-components";
 //import { useMedia, useOnScreen } from "../utils/customHooks";
@@ -282,67 +290,34 @@ class Drawer {
     this.line(x - r, y, x + r, y);
   }
 }
-const makeCallAndSetTimestamp = (fn, setTimestamp) => {
-  return () => {
-    console.log('sync and set timestamp');
-    fn();
-    setTimestamp(Date.now());
-  }
-};
-const makeGetRelativeToTimestamp = () => {
-  // Create a relative time formatter in your locale
-  // with default values explicitly passed in.
-  if(!window.Intl){
-    return (fn?: number) => 'Unknown';
-  }
-  const rtf = new window.Intl.RelativeTimeFormat("en", {
-      localeMatcher: "best fit", // other values: "lookup"
-      numeric: "auto", // other values: "auto"
-      style: "long", // other values: "short" or "narrow"
-  });
-  return (timestampToCompare?: number = Date.now()) => {
-    const timeDifference = timestampToCompare-Date.now();
-    const isWithinMinute = Math.abs(timeDifference) < 60;
-    let formatIn = 'second';
-    //if it's more than a minute difference, display in either minutes or hours
-    if(!isWithinMinute){
-      const isWithinHour = Math.abs(timeDifference) < 60*60;
-      if(isWithinHour){
-        //is >= 1 minute && <= 1 hour
-        formatIn = 'minute';
-      } else {
-        //is >= 1 hour
-        formatIn = 'hour';
-      }
-    }
-    if(isWithinMinute)
-    rtf.format(timeDifference, isWithinMinute ? "second" : "minute");
-  }
-}
-const getRelativeTime = makeGetRelativeToTimestamp();
-const parseSyncTimestamp = (timestampOfPreviousSync: number | string) => {
-  if (typeof timestampOfPreviousSync == "string") return timestampOfPreviousSync;
-  //TODO: use Intl.relative...
-  return getRelativeTime(timestampOfPreviousSync);
-};
+
 const Sync = ({
-  syncFn,
-  syncInitially
+  //what user wants to run when sync
+  onSync,
+  //whether to sync initially
+  syncInitially,
+  prevSyncTime = "Never",
+  setPrevSyncTime,
 }: {
-  syncFn: function,
-  syncInitially: boolean
+  onSync: function,
+  syncInitially: boolean,
+  prevSyncTime: string | number,
+  setPrevSyncTime: function,
 }) => {
   const [syncEnabled, setSyncEnabled] = useState(syncEnabledInitially);
   //an array in case a race condition causes multiple intervals to be set
   //and therefore ensure all intervals are able to be cleared
   const [syncIntervalIds, setSyncIntervalIds] = useState([]);
-  const [prevSyncTime, setPrevSyncTime] = useState("Never");
-
-  const sync: function = makeCallAndSetTimestamp(syncFn, setPrevSyncTime);
+  
+  const rtf = useMakeClassInstance(RelativeTimeFormat, ["en", {
+      localeMatcher: "best fit", // other values: "lookup"
+      numeric: "always", // other values: "always"
+      style: "long", // other values: "short" or "narrow"
+  }]);
 
   useEffect(() => {
     if (syncInitially) {
-      sync();
+      onSync();
     }
   }, []);
   return (
@@ -353,9 +328,9 @@ const Sync = ({
             if (!syncEnabled) {
               //set sync interval
               //initial sync call
-              sync();
+              onSync();
               const syncIntervalId = setInterval(() => {
-                sync();
+                onSync();
               }, secondsPerSync * 1000);
               setSyncIntervalIds(ids => [...ids, syncIntervalId]);
             } else {
@@ -374,7 +349,7 @@ const Sync = ({
       {syncEnabled && (
         <p>Warning: sync is enabled. This will cost money if left running.</p>
       )}
-      <p>Last sync: {parseSyncTimestamp(prevSyncTime)}</p>
+      <p>Last sync: {typeof prevSyncTime == 'string' ? prevSyncTime : rtf.format(Math.round((prevSyncTime - Date.now())/1000), "second")}</p>
     </div>
   );
 };
@@ -409,9 +384,11 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
   );
 
   const [liveNamespaces, setLiveNamespaces] = useState([]);
-  const syncFn = () => {
+  const [prevSyncTime, setPrevSyncTime] = useState("Never");
+  const onSync = () => {
     //set namespaces listed in the S3 bucket
     throttledListBucketFolders(setLiveNamespaces);
+    setPrevSyncTime(Date.now());
   };
   useEffect(() => {
     console.log("image sources:::", filesAsImgProps);
@@ -552,14 +529,14 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
         onClick={() => {
           createBucketFolder(namespace, data => {
             console.log("created bucketFolder, data:", data);
-            syncFn();
+            onSync();
             //const bucketFolders = getBucketFolderNamesFromResponse(data);
           });
         }}
       >
         Create namespace
       </button>
-      <Sync syncFn={syncFn} syncInitially={true} />
+      <Sync onSync={onSync} syncInitially={true} prevSyncTime={prevSyncTime} setPrevSyncTime={setPrevSyncTime} />
       <ImageInput
         onChange={({ filesAsImgProps, files }) => {
           setFilesAsImgProps(filesAsImgProps);
@@ -605,19 +582,14 @@ const Canvas = styled(
     className += " Canvas";
     const elCanvas = useRef(null);
     const [ctx, setCtx] = useState(null);
-    const drawRef = useRef(null);
-    const [draw, setDraw] = useState(null);
     const [setupData, setSetupData] = useState(null);
-    const getDrawer = useMakeClassInstance(drawRef, Drawer);
-
+    const draw = useMakeClassInstance(Drawer, [ctx]);
     //initially get canvas, context, and draw.
     useEffect(() => {
       const canvas = elCanvas.current;
       if (canvas) {
         const context = canvas.getContext("2d");
         setCtx(context);
-        const draw = getDrawer(context);
-        setDraw(draw);
       }
     }, []);
 

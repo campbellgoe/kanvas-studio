@@ -12,6 +12,6 @@ import safelyCallAndSetState from './safelyCallAndSetState.js';
 
 import snap from './snap.js';
 
-import state from './state.js';
+import useStateValue from './useStateValue.js';
 
-export { capitalize, clientHasJavaScriptEnabled, getBoxShadow, makeButtonStyles, pointInput, safelyCallAndSetState, snap, state };
+export { capitalize, clientHasJavaScriptEnabled, getBoxShadow, makeButtonStyles, pointInput, safelyCallAndSetState, snap, useStateValue };

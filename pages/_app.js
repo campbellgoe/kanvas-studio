@@ -2,11 +2,13 @@ import App from "next/app";
 import Head from "next/head";
 import React from "react";
 import { ThemeProvider } from "styled-components";
-import { StateProvider } from "../utils/state";
+import { StateProvider } from "../utils/useStateValue";
 import theme from "../theme";
+
 const uuid = require("uuid/v4");
 
 const StateContainer = ({ children }) => {
+  
   const state = { cards: new Map(), maxCards: 6 };
   const reducer = (state, { type, payload }) => {
     const cards = state.cards;

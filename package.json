@@ -24,6 +24,7 @@
     "react": "^16.7.0",
     "react-dom": "^16.7.0",
     "react-use": "^12.2.2",
+    "relative-time-format": "^1.0.5",
     "ssr-window": "^1.0.1",
     "styled-components": "^4.0.0",
     "throttle-debounce": "^2.1.0"
