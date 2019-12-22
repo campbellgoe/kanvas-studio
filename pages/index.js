@@ -35,11 +35,16 @@ const throttledListBucketFolders = throttle(
 //only create the last bucket folder if a burst of requests to create bucket folders are made
 const debouncedCreateBucketFolder = debounce(
   1000 * minimumSecondsPerSync,
+  true,
   createBucketFolder
 );
 
 //only upload the last file(s) upload request if a burst of requests to upload files are made.
-const debouncedUploadFile = debounce(1000 * minimumSecondsPerSync, uploadFile);
+const debouncedUploadFile = debounce(
+  1000 * minimumSecondsPerSync,
+  true,
+  uploadFile
+);
 
 //import React, { useState, useEffect, useRef } from "react";
 //import styled, { withTheme } from "styled-components";
