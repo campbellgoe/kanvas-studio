@@ -849,6 +849,13 @@
   resolved "https://registry.yarnpkg.com/@emotion/unitless/-/unitless-0.7.4.tgz#a87b4b04e5ae14a88d48ebef15015f6b7d1f5677"
   integrity sha512-kBa+cDHOR9jpRJ+kcGMsysrls0leukrm68DmFQoMIWQcXdr2cZvyvypWuGYT7U+9kAExUE7+T7r6G3C3A6L8MQ==
 
+"@toolia/use-event-listener@^3.0.1":
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/@toolia/use-event-listener/-/use-event-listener-3.0.1.tgz#d7b270e05ef40b0910c4a27df187d11cb7cb641e"
+  integrity sha512-BoSpgTuW5GxiCodjOMVsYNy1LuUC7BZYT+3eohhAXpdJkGi8oGy2qTjWkRPWZi9sZpeBMYdquljrHSI+XD0pyQ==
+  dependencies:
+    esm "^3.2.25"
+
 "@webassemblyjs/ast@1.8.5":
   version "1.8.5"
   resolved "https://registry.yarnpkg.com/@webassemblyjs/ast/-/ast-1.8.5.tgz#51b1c5fe6576a34953bf4b253df9f0d490d9e359"
@@ -2169,6 +2176,11 @@ eslint-scope@^4.0.3:
   dependencies:
     esrecurse "^4.1.0"
     estraverse "^4.1.1"
+
+esm@^3.2.25:
+  version "3.2.25"
+  resolved "https://registry.yarnpkg.com/esm/-/esm-3.2.25.tgz#342c18c29d56157688ba5ce31f8431fbb795cc10"
+  integrity sha512-U1suiZ2oDVWv4zPO56S0NcR5QriEahGtdN2OR6FiOG4WJvcjBVFB0qI4+eKoWFH483PKGuLuu6V8Z4T5g63UVA==
 
 esrecurse@^4.1.0:
   version "4.2.1"

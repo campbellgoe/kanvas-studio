@@ -12,7 +12,7 @@ import { ToastContainer } from "../components/ToastNotifications";
 import ImageInput from "../components/ImageInput";
 import ProjectInput from "../components/ProjectInput";
 import { window } from "ssr-window";
-//import useEventListener from '@toolia/use-event-listener';
+import useEventListener from "@toolia/use-event-listener";
 import { throttle, debounce } from "throttle-debounce";
 import safelyCallAndSetState from "../utils/safelyCallAndSetState.js";
 import { snap, pointInput as registerPointEventListeners } from "../utils";
@@ -55,7 +55,7 @@ const debouncedUploadFile = debounce(
 //const uuid = require("uuid/v4");
 const syncEnabledInitially = false;
 const msPerFrame = 30;
-const secondsPerSync = 60; //this makes api call to AWS, so be careful not to set it too low.
+const secondsPerSync = 60; //this automatically makes api call to AWS, so be careful not to set it too low.
 
 const origin = {
   x: 0,
@@ -63,33 +63,6 @@ const origin = {
   z: 0
 };
 
-const useEventListener = (
-  target,
-  eventName,
-  eventHandler,
-  { initialiseOnAttach = false, logAttachChange = false } = {},
-  listenerOpts
-) => {
-  const [listening, setListening] = useState(true);
-  const memoizedCallback = useCallback(eventHandler, [eventHandler]);
-  useEffect(() => {
-    if (listening) {
-      if (logAttachChange)
-        console.warn("Adding event listener. Event:", eventName);
-      target.addEventListener(eventName, memoizedCallback, listenerOpts);
-      if (initialiseOnAttach) {
-        const eventObject = new Event(eventName);
-        target.dispatchEvent(eventObject);
-      }
-    }
-    return () => {
-      if (logAttachChange)
-        console.warn("Removing event listener. Event:", eventName);
-      target.removeEventListener(eventName, memoizedCallback, listenerOpts);
-    };
-  }, [target, listening, initialiseOnAttach, logAttachChange]);
-  return [listening, setListening];
-};
 class Drawer {
   ctx: CanvasRenderingContext2D;
   constructor(ctx) {
