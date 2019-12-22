@@ -14,4 +14,6 @@ import snap from './snap.js';
 
 import useStateValue from './useStateValue.js';
 
-export { capitalize, clientHasJavaScriptEnabled, getBoxShadow, makeButtonStyles, pointInput, safelyCallAndSetState, snap, useStateValue };
+import formatRelativeTime from './formatRelativeTime.js';
+
+export { capitalize, clientHasJavaScriptEnabled, getBoxShadow, makeButtonStyles, pointInput, safelyCallAndSetState, snap, useStateValue, formatRelativeTime };

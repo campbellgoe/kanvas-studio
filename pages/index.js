@@ -21,10 +21,9 @@ import { useLocalStorage } from "react-use";
 import S3 from "aws-sdk/clients/s3";
 import envConfig from "../env.config.json";
 
-import RelativeTimeFormat from "relative-time-format"
-import en from "relative-time-format/locale/en.json"
+import Sync from '../components/Sync';
  
-RelativeTimeFormat.addLocale(en)
+
 
 
 
@@ -290,91 +289,6 @@ class Drawer {
     this.line(x - r, y, x + r, y);
   }
 }
-const formatRelativeTime = (rtf, prevSyncTime) => {
-  let diffInSeconds = ((prevSyncTime - Date.now())/1000);
-  const absDiff = Math.abs(diffInSeconds);
-  let outputDiff = Math.ceil(diffInSeconds);
-  let outputFormat;
-  if(absDiff < 1){
-    //sub second
-    outputDiff = diffInSeconds;
-  }
-  if(absDiff < 60){
-    outputFormat = 'second';
-  } else if(absDiff < 60*60){
-    outputFormat = 'minute';
-    outputDiff = Math.ceil(outputDiff/60);
-  } else if(absDiff < 60*60*24){
-    outputFormat = 'hour';
-    outputDiff = Math.ceil(outputDiff/(60*60));
-  } else {
-    outputFormat = 'day';
-    outputDiff = Math.ceil(outputDiff/(60*60*24));
-  }
-  return rtf.format(outputDiff, outputFormat);
-}
-const Sync = ({
-  //what user wants to run when sync
-  onSync,
-  //whether to sync initially
-  syncInitially,
-  prevSyncTime = "Never",
-  setPrevSyncTime,
-}: {
-  onSync: function,
-  syncInitially: boolean,
-  prevSyncTime: string | number,
-  setPrevSyncTime: function,
-}) => {
-  const [syncEnabled, setSyncEnabled] = useState(syncEnabledInitially);
-  //an array in case a race condition causes multiple intervals to be set
-  //and therefore ensure all intervals are able to be cleared
-  const [syncIntervalIds, setSyncIntervalIds] = useState([]);
-  
-  const rtf = useMakeClassInstance(RelativeTimeFormat, ["en", {
-      localeMatcher: "best fit", // other values: "lookup"
-      numeric: "always", // other values: "always"
-      style: "long", // other values: "short" or "narrow"
-  }]);
-
-  useEffect(() => {
-    if (syncInitially) {
-      onSync();
-    }
-  }, []);
-  return (
-    <div>
-      <button
-        onClick={() => {
-          setSyncEnabled(syncEnabled => {
-            if (!syncEnabled) {
-              //set sync interval
-              //initial sync call
-              onSync();
-              const syncIntervalId = setInterval(() => {
-                onSync();
-              }, secondsPerSync * 1000);
-              setSyncIntervalIds(ids => [...ids, syncIntervalId]);
-            } else {
-              //clear sync interval
-              setSyncIntervalIds(ids => {
-                ids.forEach(id => clearInterval(id));
-                return [];
-              });
-            }
-            return !syncEnabled;
-          });
-        }}
-      >
-        {syncEnabled ? "Disable sync" : "Enable sync"}
-      </button>
-      {syncEnabled && (
-        <p>Warning: sync is enabled. This will cost money if left running.</p>
-      )}
-      <p>Last sync: {typeof prevSyncTime == 'string' ? prevSyncTime : formatRelativeTime(rtf, prevSyncTime)}</p>
-    </div>
-  );
-};
 
 //TODO: move intialSize into Orchestrator props
 const initialSize = { width: 300, height: 150 };
@@ -558,7 +472,7 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
       >
         Create namespace
       </button>
-      <Sync onSync={onSync} syncInitially={true} prevSyncTime={prevSyncTime} setPrevSyncTime={setPrevSyncTime} />
+      <Sync onSync={onSync} syncInitially={true} secondsPerSync={secondsPerSync} syncEnabledInitially={syncEnabledInitially} prevSyncTime={prevSyncTime}/>
       <ImageInput
         onChange={({ filesAsImgProps, files }) => {
           setFilesAsImgProps(filesAsImgProps);
