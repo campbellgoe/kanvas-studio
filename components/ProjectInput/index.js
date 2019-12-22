@@ -30,9 +30,13 @@ const ProjectInput = ({
           placeholder="Namespace"
           id="project-namespace-input"
           value={project.namespace}
-          onChange={e =>
-            setProject(project => ({ ...project, namespace: e.target.value }))
-          }
+          onChange={e => {
+            const value = e.target.value;
+            setProject(project => ({
+              ...project,
+              namespace: value
+            }));
+          }}
         />
       </span>
       <span>
@@ -47,6 +51,6 @@ const ProjectInputStyled = (styled(ProjectInput)`
   flex-direction: column;
   justify-content: flex-start;
   margin-top: 16px;
-  background-color: #EEEEEE;
+  background-color: #eeeeee;
 `: ComponentType<ProjectInputProps>);
 export default ProjectInputStyled;
