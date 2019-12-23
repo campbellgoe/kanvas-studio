@@ -27,8 +27,8 @@ import { useLocalStorage } from "react-use"; //used like useState but saves/load
 
 //utilities
 import { throttle, debounce } from "throttle-debounce";
-import { snap, safelyCallAndSetState } from "../utils";
-
+import { safelyCallAndSetState } from "../utils";
+import snap, { snapAll } from "../utils/snap";
 //classes
 import Drawer from "../classes/Drawer"; //common methods for drawing on 2d canvas
 //TODO: need to refactor S3Client
@@ -77,9 +77,6 @@ type OrchestratorProps = {
   className: string,
   resizeThrottleDelay: number,
   initialSize: { width: number, height: number }
-};
-const snapAll = (toSnap, granularity) => {
-  return toSnap.map(x => snap(x, granularity));
 };
 const Orchestrator = (styled(
   ({ className = "", resizeThrottleDelay, initialSize }) => {
@@ -216,6 +213,7 @@ const Orchestrator = (styled(
             className="OrchestratorCanvas"
             width={width}
             height={height}
+            hideCursor={true}
             resizeEventDrawFn={(ctx, draw) => {
               console.log("after resize draw");
               setCellSize(Math.max(width, height) / gridCellSizeDivisor);
@@ -365,17 +363,19 @@ type CanvasProps = {
   height: number,
   resizeEventDrawFn: function,
   animationFrameDrawFn: function,
-  frame: number
+  frame: number,
+  hideCursor?: boolean
 };
-const Canvas = styled(
+const Canvas = (styled(
   ({
     className = "",
     width = 300,
     height = 150,
-    resizeEventDrawFn = Function.prototype,
-    animationFrameDrawFn = Function.prototype,
-    frame = 0
-  }: CanvasProps) => {
+    resizeEventDrawFn,
+    animationFrameDrawFn,
+    frame = 0,
+    hideCursor = false
+  }) => {
     className += " Canvas";
     const elCanvas = useRef(null);
     const [ctx, setCtx] = useState(null);
@@ -400,14 +400,16 @@ const Canvas = styled(
       }
     }, [width, height, ctx, draw, resizeEventDrawFn]);
     useEffect(() => {
-      if (ctx && draw && frame)
+      if (ctx && draw && frame) {
         animationFrameDrawFn(ctx, draw, frame, setupData);
+      }
     }, [ctx, draw, animationFrameDrawFn, frame]);
     return <canvas className={className} ref={elCanvas} />;
   }
 )`
   background-color: white;
-`;
+  ${({ hideCursor }) => (hideCursor ? "cursor: none;" : "")}
+`: ComponentType<CanvasProps>);
 const Panel = styled(({ className = "" }) => {
   className += " Panel";
   //const [coords, setCoords] = useState(origin);
