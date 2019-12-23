@@ -118,7 +118,7 @@ const Orchestrator = (styled(
       { swoopOnStart: swoopToOriginOnStart },
       [cellSize, width, height, frame]
     );
-    const [filesAsImgProps, setFilesAsImgProps] = useState([]);
+    const [filesForUpload, setFilesForUpload] = useState([]);
     const [namespace, setNamespace] = useLocalStorage(
       "kanvas-studio-namespace",
       ""
@@ -132,8 +132,8 @@ const Orchestrator = (styled(
       setPrevSyncTime(Date.now());
     };
     useEffect(() => {
-      console.log("image sources:::", filesAsImgProps);
-    }, [filesAsImgProps]);
+      console.log("image sources:::", filesForUpload);
+    }, [filesForUpload]);
     const elOrchestrator = useRef(null);
     const elCanvasContainer = useRef(null);
     const throttledHandleResize = useCallback(
@@ -335,15 +335,15 @@ const Orchestrator = (styled(
           prevSyncTime={prevSyncTime}
         />
         <ImageInput
-          onChange={({ filesAsImgProps, files }) => {
-            setFilesAsImgProps(filesAsImgProps);
-            debouncedUploadFile(namespace, { files, filesAsImgProps });
+          onChange={files => {
+            setFilesForUpload(files);
+            debouncedUploadFile(namespace, files);
           }}
         />
-        {filesAsImgProps.map(({ src, filename }, index) => {
+        {filesForUpload.map(({ blobSrc: src, originalFile }, index) => {
           return (
             <div key={src + index}>
-              <p>{filename}</p>
+              <p>{originalFile.name}</p>
               <img src={src} alt="User uploaded" />
             </div>
           );

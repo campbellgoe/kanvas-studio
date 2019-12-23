@@ -106,11 +106,14 @@ function listBucketFolders(cb) {
   });
 }
 
-function uploadFile(bucketFolderName, { files, filesAsImgProps }) {
+function uploadFile(bucketFolderName, files) {
   if (!files.length) {
     return console.warn("Please choose a file to upload first.");
   }
-  var file = files[0];
+  if (files.length > 1) {
+    console.warn("Can only upload 1 image at a time.");
+  }
+  var file = files[0].originalFile;
 
   var bucketFolderPhotosKey = encodeURIComponent(bucketFolderName) + "/";
 
