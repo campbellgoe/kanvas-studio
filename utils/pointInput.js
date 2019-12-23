@@ -60,7 +60,11 @@ export const getInputXY = (e, handleContextMenu) => {
   throw new Error("unknown type " + e.type);
 };
 
-export const registerMouseAndTouchEventListeners = (element = document, { handleContextMenu = true } = {}, cb) => {
+export const registerMouseAndTouchEventListeners = (
+  element = document,
+  { handleContextMenu = true, logAttachChange = false } = {},
+  cb
+) => {
   let isDown = false;
   let isMove = false;
   let downControlType = null;
@@ -68,7 +72,7 @@ export const registerMouseAndTouchEventListeners = (element = document, { handle
     x: 0,
     y: 0
   };
-  const onInput = (e) => {
+  const onInput = e => {
     let {
       position: { x, y },
       eventType,
@@ -79,7 +83,7 @@ export const registerMouseAndTouchEventListeners = (element = document, { handle
       e.type.endsWith("down") ||
       e.type === "contextmenu"
     ) {
-      if(isDown){
+      if (isDown) {
         //already down yet clicking 'down' again, so it should imagine this is a mouseup/touchend instead.
         isDown = false;
         return;
@@ -116,7 +120,7 @@ export const registerMouseAndTouchEventListeners = (element = document, { handle
     element.addEventListener("pointerdown", onInput);
     element.addEventListener("pointermove", onInput);
     element.addEventListener("pointerup", onInput);
-    unregisterListenerFns.push(()=>{
+    unregisterListenerFns.push(() => {
       element.removeEventListener("pointerdown", onInput);
       element.removeEventListener("pointermove", onInput);
       element.removeEventListener("pointerup", onInput);
@@ -127,7 +131,7 @@ export const registerMouseAndTouchEventListeners = (element = document, { handle
       element.addEventListener("touchstart", onInput);
       element.addEventListener("touchmove", onInput);
       element.addEventListener("touchend", onInput);
-      unregisterListenerFns.push(()=>{
+      unregisterListenerFns.push(() => {
         element.removeEventListener("touchstart", onInput);
         element.removeEventListener("touchmove", onInput);
         element.removeEventListener("touchend", onInput);
@@ -138,19 +142,26 @@ export const registerMouseAndTouchEventListeners = (element = document, { handle
       element.addEventListener("mousedown", onInput);
       element.addEventListener("mousemove", onInput);
       element.addEventListener("mouseup", onInput);
-      unregisterListenerFns.push(()=>{
+      unregisterListenerFns.push(() => {
         element.removeEventListener("mousedown", onInput);
         element.removeEventListener("mousemove", onInput);
         element.removeEventListener("mouseup", onInput);
       });
     }
   }
-  if(handleContextMenu){
+  if (handleContextMenu) {
     element.addEventListener("contextmenu", onInput);
-    unregisterListenerFns.push(()=>{
+    unregisterListenerFns.push(() => {
       element.removeEventListener("contextmenu", onInput);
     });
   }
+  if (logAttachChange) {
+    console.log(
+      unregisterListenerFns.length,
+      "mouse/touch/pointer event listeners attached."
+    );
+  }
+
   return () => {
     // this looks brutal, so i've commented it out, and am doing it another way.
     // while(unregisterListenerFns.length){
@@ -160,6 +171,6 @@ export const registerMouseAndTouchEventListeners = (element = document, { handle
       unregisterFn();
     });
     unregisterListenerFns = [];
-  }
+  };
 };
 export default registerMouseAndTouchEventListeners;

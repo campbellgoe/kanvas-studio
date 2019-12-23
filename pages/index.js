@@ -111,6 +111,28 @@ type OrchestratorProps = {
   className: string,
   resizeThrottleDelay: number
 };
+const usePointerEventListener = (elRef, eventHandler, opts) => {
+  const [listening, setListening] = useState(true);
+  const memoizedCallback = useCallback(eventHandler, [eventHandler]);
+  const [pointer, setPointer] = useState({});
+  //const [unregisterFn, setUnregisterFn] = useState(null);
+  useEffect(() => {
+    if (elRef && listening) {
+      const unregisterPointEventListeners = registerPointEventListeners(
+        elRef.current,
+        opts,
+        pointer => {
+          setPointer(pointer);
+        }
+      );
+      return unregisterPointEventListeners;
+    }
+  }, [elRef, listening]);
+  useEffect(() => {
+    memoizedCallback(pointer);
+  }, [pointer]);
+  return [pointer, [listening, setListening]];
+};
 const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
   className += " Orchestrator";
   //offset from origin (0, 0)
@@ -121,8 +143,6 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
   });
   //viewport width/height
   const [{ width, height }, setSize] = useState(initialSize);
-  //mouse/touch input
-  const [pointer, setPointer] = useState({});
   //animation frame
   const [frame, setFrame] = useState(0);
   //grid cell size
@@ -145,7 +165,7 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
   }, [filesAsImgProps]);
   const elOrchestrator = useRef(null);
   const elCanvasContainer = useRef(null);
-  const throttledGetWindowSize = useCallback(
+  const throttledHandleResize = useCallback(
     throttle(resizeThrottleDelay, e => {
       const target = e.target;
       setSize({
@@ -158,45 +178,41 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
   const [listeningToResize, setListenToResize] = useEventListener(
     window,
     "resize",
-    throttledGetWindowSize,
+    throttledHandleResize,
     {
       initialiseOnAttach: true,
       logAttachChange: true
     }
   );
-  useEffect(() => {
-    if (elCanvasContainer) {
-      return registerPointEventListeners(
-        elCanvasContainer.current,
-        { handleContextMenu: true },
-        pointInputData => {
-          setPointer(pointInputData);
-          //TODO: move logic from pointer useEffect below to this function...
-        }
-      );
-    }
-  }, []);
+  const [
+    pointer,
+    [listeningToPointer, setListeningToPointer]
+  ] = usePointerEventListener(
+    elCanvasContainer,
+    pointer => {
+      //console.log('pointer:', pointer);
+      if (pointer.isDrag) {
+        //change x,y canvas offset
+        setOffset({
+          ox: pointer.x - pointer.downX + oxLast,
+          oy: pointer.y - pointer.downY + oyLast
+        });
+      }
+      //on mouse up, save last offset x,y and add that to the offset when dragging.
+      //e.g. keep the offset from resetting back to 0,0.
+      if (!pointer.isDown) {
+        setLastOffset({ oxLast: ox, oyLast: oy });
+      }
+    },
+    { handleContextMenu: true, logAttachChange: true }
+  );
+
   //TODO: improve the animation loop by using requestAnimationFrame instead of setTimeout
   useEffect(() => {
     setTimeout(() => {
       setFrame(frame + 1);
     }, msPerFrame);
   }, [frame]);
-  useEffect(() => {
-    //console.log('pointer:', pointer);
-    if (pointer.isDrag) {
-      //change x,y canvas offset
-      setOffset({
-        ox: pointer.x - pointer.downX + oxLast,
-        oy: pointer.y - pointer.downY + oyLast
-      });
-    }
-    //on mouse up, save last offset x,y and add that to the offset when dragging.
-    //e.g. keep the offset from resetting back to 0,0.
-    if (!pointer.isDown) {
-      setLastOffset({ oxLast: ox, oyLast: oy });
-    }
-  }, [pointer]);
 
   //relative to top-left of screen, in pixels.
   const getSnappedToGrid = (x, y) => {
@@ -254,6 +270,12 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
             //ctx.fill();
             draw.cross(origin.x, origin.y, cellSize * 2);
             ctx.stroke();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.fillStyle = pointer.isDown ? "red" : "black";
+            draw.circle(pointer.x, pointer.y, 5);
+            ctx.fill();
             ctx.closePath();
           }}
           frame={frame}
