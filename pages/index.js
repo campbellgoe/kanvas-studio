@@ -410,28 +410,6 @@ const Canvas = (styled(
   background-color: white;
   ${({ hideCursor }) => (hideCursor ? "cursor: none;" : "")}
 `: ComponentType<CanvasProps>);
-const Panel = styled(({ className = "" }) => {
-  className += " Panel";
-  //const [coords, setCoords] = useState(origin);
-  return (
-    <div className={className}>
-      <Orchestrator
-        className="PanelOrchestrator"
-        resizeThrottleDelay={300}
-        initialSize={initialSize}
-      />
-    </div>
-  );
-})`
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  left: 0;
-  top: 0;
-  margin: 0;
-  padding: 0;
-  background-color: #eeeeee;
-`;
 
 type KanvasStudioProps = {
   className: string
@@ -440,8 +418,12 @@ const KanvasStudio = (styled(({ className = "" }) => {
   className += " KanvasStudio";
   return (
     <div className={className} id="app">
-      <ToastContainer className="ToastContainer" />
-      <Panel />
+      <ToastContainer className="KanvasStudioToastContainer" />
+      <Orchestrator
+        className="KanvasStudioOrchestrator"
+        resizeThrottleDelay={300}
+        initialSize={initialSize}
+      />
     </div>
   );
 })`
@@ -453,5 +435,16 @@ const KanvasStudio = (styled(({ className = "" }) => {
     font-size: 12px;
     margin-top: 8px;
   }
+  .KanvasStudioOrchestrator {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    margin: 0;
+    padding: 0;
+    background-color: #eeeeee;
+  }
 `: ComponentType<KanvasStudioProps>);
+
 export default KanvasStudio;
