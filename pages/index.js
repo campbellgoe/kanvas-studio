@@ -21,11 +21,11 @@ import Sync from "../components/Sync";
 import ConfigRenderer from "../components/ConfigRenderer";
 
 //hooks
-import useEventListener from "@toolia/use-event-listener"; //for resize
 import {
   useMakeClassInstance,
   usePointerEventListener,
-  useSwoopToPosition
+  useSwoopToPosition,
+  useGetViewportSizeOnResize
 } from "../hooks"; //for making Drawer instance
 import { useLocalStorage } from "react-use"; //used like useState but saves/loads data in localStorage
 
@@ -96,14 +96,23 @@ const Orchestrator = (styled(
     //relative to top-left of screen, in pixels.
 
     //const offsetForScreen = getSnappedCoords(width / 2, height / 2, cellSize)
-
+    const [
+      { width, height },
+      [listeningToResize, setListenToResize]
+    ] = useGetViewportSizeOnResize(
+      {
+        logAttachChange: true,
+        throttleDelayMs: resizeThrottleDelay,
+        initialSize
+      },
+      [throttle]
+    );
     const [{ x: ox, y: oy }, setOffset] = useState({ x: 0, y: 0 });
     const [{ oxLast, oyLast }, setLastOffset] = useState({
       oxLast: 0,
       oyLast: 0
     });
-    //viewport width/height
-    const [{ width, height }, setSize] = useState(initialSize);
+
     //animation frame
     const [frame, setFrame] = useState(0);
     //grid cell size
@@ -134,27 +143,8 @@ const Orchestrator = (styled(
     useEffect(() => {
       console.log("image sources:::", filesForUpload);
     }, [filesForUpload]);
-    const elOrchestrator = useRef(null);
+
     const elCanvasContainer = useRef(null);
-    const throttledHandleResize = useCallback(
-      throttle(resizeThrottleDelay, e => {
-        const target = e.target;
-        setSize({
-          width: target.innerWidth,
-          height: target.innerHeight
-        });
-      }),
-      [throttle]
-    );
-    const [listeningToResize, setListenToResize] = useEventListener(
-      window,
-      "resize",
-      throttledHandleResize,
-      {
-        initialiseOnAttach: true,
-        logAttachChange: true
-      }
-    );
     const [
       pointer,
       [listeningToPointer, setListenToPointer]
@@ -191,7 +181,7 @@ const Orchestrator = (styled(
     }, [frame]);
 
     return (
-      <div className={className} ref={elOrchestrator}>
+      <div className={className}>
         <div className="hud">
           {namespace && (
             <span className="hud-item">Local namespace: {namespace}</span>
