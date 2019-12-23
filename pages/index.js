@@ -79,18 +79,12 @@ const initialSize = { width: 480, height: 800 };
 const gridCellSizeDivisor = 40; //divisions per width or height (based on which is larger)
 type OrchestratorProps = {
   className: string,
-  resizeThrottleDelay: number,
   initialSize: { width: number, height: number },
   swoopToOriginOnStart: boolean
 };
 
 const Orchestrator = (styled(
-  ({
-    className = "",
-    resizeThrottleDelay,
-    initialSize,
-    swoopToOriginOnStart = true
-  }) => {
+  ({ className = "", initialSize, swoopToOriginOnStart = true }) => {
     className += " Orchestrator";
     //offset from origin (0, 0)
     //relative to top-left of screen, in pixels.
@@ -101,7 +95,6 @@ const Orchestrator = (styled(
       [listeningToResize, setListenToResize]
     ] = useGetViewportSizeOnResize({
       logAttachChange: true,
-      throttleDelayMs: resizeThrottleDelay,
       initialSize
     });
     const [{ x: ox, y: oy }, setOffset] = useState({ x: 0, y: 0 });
@@ -411,7 +404,6 @@ const KanvasStudio = (styled(({ className = "" }) => {
       <ToastContainer className="KanvasStudioToastContainer" />
       <Orchestrator
         className="KanvasStudioOrchestrator"
-        resizeThrottleDelay={300}
         initialSize={initialSize}
         swoopToOriginOnStart={true}
       />
