@@ -1,5 +1,9 @@
 // @flow
 
+//initial mock window so SSR won't kill app when window is accessed during initialisation
+import { window } from "ssr-window";
+
+//react and styled-components
 import React, {
   useRef,
   useEffect,
@@ -8,21 +12,39 @@ import React, {
   type ComponentType
 } from "react";
 import styled from "styled-components";
+
+//react components
 import { ToastContainer } from "../components/ToastNotifications";
 import ImageInput from "../components/ImageInput";
 import ProjectInput from "../components/ProjectInput";
-import { window } from "ssr-window";
-import useEventListener from "@toolia/use-event-listener";
-import { throttle, debounce } from "throttle-debounce";
-import safelyCallAndSetState from "../utils/safelyCallAndSetState.js";
-import { snap, pointInput as registerPointEventListeners } from "../utils";
-import { useMakeClassInstance } from "../hooks";
-import { useLocalStorage } from "react-use";
-
 import Sync from "../components/Sync";
 
-import { listBucketFolders, createBucketFolder, uploadFile } from "../S3Client";
+//hooks
+import useEventListener from "@toolia/use-event-listener"; //for resize
+import { useMakeClassInstance } from "../hooks"; //for making Drawer instance
+import { useLocalStorage } from "react-use"; //used like useState but saves/loads data in localStorage
 
+//utilities
+import { throttle, debounce } from "throttle-debounce";
+import {
+  snap,
+  pointInput as registerPointEventListeners,
+  safelyCallAndSetState
+} from "../utils";
+
+//classes
+import Drawer from "../classes/Drawer"; //common methods for drawing on 2d canvas
+//TODO: need to refactor S3Client
+import {
+  //aka list namespaces
+  listBucketFolders,
+  //aka create new namespace
+  createBucketFolder,
+  //upload file to a given namespace
+  uploadFile
+} from "../classes/S3Client";
+
+//JSON version of .env (built with yarn run build:env)
 import envConfig from "../env.config.json";
 
 //in case a user does many actions in a short time, the minimum is this.
@@ -57,52 +79,6 @@ const syncEnabledInitially = false;
 const msPerFrame = 30;
 const secondsPerSync = 60; //this automatically makes api call to AWS, so be careful not to set it too low.
 
-const origin = {
-  x: 0,
-  y: 0,
-  z: 0
-};
-
-class Drawer {
-  ctx: CanvasRenderingContext2D;
-  constructor(ctx) {
-    this.ctx = ctx;
-  }
-  line(xStart: number, yStart: number, xEnd: number, yEnd: number) {
-    const ctx = this.ctx;
-    ctx.moveTo(xStart, yStart);
-    ctx.lineTo(xEnd, yEnd);
-  }
-  //sx, sy = start x, y.
-  //ex, ey = end x, y.
-  //cellSize is distance between lines
-  //grid will automatically fill the area given by sx,sy,ex,ey with gridlines of cellSize apart.
-  grid(sx: number, sy: number, ex: number, ey: number, cellSize: number) {
-    const ctx = this.ctx;
-    const width = ex - sx;
-    const height = ey - sy;
-    const xLines = width / cellSize;
-    const yLines = height / cellSize;
-    ctx.beginPath();
-    for (let ix = 0; ix < xLines; ix++) {
-      const x = sx + ix * cellSize;
-      this.line(x, sy, x, ey);
-    }
-    for (let iy = 0; iy < yLines; iy++) {
-      const y = sy + iy * cellSize;
-      this.line(sx, y, ex, y);
-    }
-    ctx.stroke();
-    ctx.closePath();
-  }
-  circle(x, y, r) {
-    this.ctx.arc(x, y, r, 0, Math.PI * 2);
-  }
-  cross(x, y, r) {
-    this.line(x, y - r, x, y + r);
-    this.line(x - r, y, x + r, y);
-  }
-}
 type ConfigItemType = {
   getJSX: function,
   layout: string
