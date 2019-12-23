@@ -21,7 +21,10 @@ const usePointerEventListener = (elRef, eventHandler, opts) => {
   useEffect(() => {
     memoizedCallback(pointer);
   }, [pointer]);
-  return [pointer, [listening, setListening]];
+  return [
+    [pointer, setPointer],
+    [listening, setListening]
+  ];
 };
 
 export default usePointerEventListener;

@@ -114,15 +114,19 @@ const Orchestrator = (styled(
         return { x, y };
       },
       setOffset,
-      { swoopOnStart: swoopToOriginOnStart },
-      [cellSize, width, height, frame]
+      {
+        swoopOnStart: swoopToOriginOnStart,
+        easeAmount: 20
+        //onTargetReached: () => setSwoopToOrigin(false)
+      },
+      [cellSize, width, height, frame, ox, oy]
     );
     const [filesForUpload, setFilesForUpload] = useState([]);
     const [namespace, setNamespace] = useLocalStorage(
       "kanvas-studio-namespace",
       ""
     );
-
+    //TODO: useRedux instead and make it projectData which contains namespace data.
     const [liveNamespaces, setLiveNamespaces] = useState([]);
     const [prevSyncTime, setPrevSyncTime] = useState("Never");
     const onSync = () => {
@@ -136,28 +140,38 @@ const Orchestrator = (styled(
 
     const elCanvasContainer = useRef(null);
     const [
-      pointer,
+      [pointer, setPointer],
       [listeningToPointer, setListenToPointer]
     ] = usePointerEventListener(
       elCanvasContainer,
       pointer => {
+        const lox = pointer.x - pointer.downX + oxLast;
+        const loy = pointer.y - pointer.downY + oyLast;
         //console.log('pointer:', pointer);
         if (pointer.isDrag) {
           //change x,y canvas offset
-          setOffset({
-            x: pointer.x - pointer.downX + oxLast,
-            y: pointer.y - pointer.downY + oyLast
-          });
+
+          if (swoopToOrigin) {
+            setSwoopToOrigin(false);
+            setLastOffset({ oxLast: ox, oyLast: oy });
+          } else {
+            setOffset({
+              x: lox,
+              y: loy
+            });
+          }
         }
         //on mouse up, save last offset x,y and add that to the offset when dragging.
         //e.g. keep the offset from resetting back to 0,0.
-        if (!pointer.isDown) {
-          setLastOffset({ oxLast: ox, oyLast: oy });
-        } else {
+        if (pointer.isDown) {
+          //if user clicks down while swooping, stop swooping
+          //(and release the mouse so that next lastOffset is set on the correct frame, to stop a frame jump)
           if (swoopToOrigin) {
-            setLastOffset({ oxLast: ox, oyLast: oy });
             setSwoopToOrigin(false);
+            setPointer(pointer => ({ ...pointer, isDown: false }));
           }
+        } else {
+          setLastOffset({ oxLast: ox, oyLast: oy });
         }
       },
       { handleContextMenu: true, logAttachChange: true }
