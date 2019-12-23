@@ -103,6 +103,99 @@ class Drawer {
     this.line(x - r, y, x + r, y);
   }
 }
+type ConfigItemType = {
+  getJSX: function,
+  layout: string
+};
+const makeConfigItem = (
+  type: string,
+  getJSX: function,
+  layout: string = "list"
+) => {
+  const configItem: ConfigItemType = {
+    getJSX,
+    layout
+  };
+  return [type, configItem];
+};
+const typeToConfigItemMap: any = new Map([
+  makeConfigItem(
+    "button",
+    button => {
+      if (!button) return null;
+      const { onClick, children } = button;
+      return <button onClick={onClick}>{children}</button>;
+    },
+    "list"
+  ),
+  makeConfigItem(
+    "coords",
+    data => {
+      if (!data) return null;
+      let { coords, delimiter = ", ", brackets = "" } = data;
+      //if neither a string nor an array but truthy, default to ()
+      if (typeof brackets != "string" && !Array.isArray(brackets)) {
+        brackets = "()";
+      }
+      const [leftBracket = "", rightBracket = ""] = brackets;
+      return (
+        <pre>{`${leftBracket}${coords.join(delimiter)}${rightBracket}`}</pre>
+      );
+    },
+    "inline"
+  )
+]);
+// This is a very generic renderer, taking config and outputting jsx.
+const ConfigRenderer = styled(({ className = "", config = [] }) => {
+  className += " ConfigRenderer";
+  return (
+    <div className={className}>
+      {config.map(({ label, type, data }, index) => {
+        const { getJSX, layout }: ConfigItemType = typeToConfigItemMap.get(
+          type
+        );
+        return (
+          <div
+            key={index + className}
+            className={`flexible-container contains-${layout}-items`}
+          >
+            {label && <label>{label}</label>}
+            {getJSX(data)}
+          </div>
+        );
+      })}
+    </div>
+  );
+})`
+  .flexible-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+
+    &.contains-list-items {
+      flex-direction: column;
+    }
+    &.contains-inline-items {
+      flex-direction: row;
+      > * {
+        margin-right: 4px;
+        :first-child {
+          margin-left: 0;
+        }
+      }
+    }
+    > * {
+      display: inline-block;
+    }
+  }
+  label,
+  button,
+  p,
+  pre {
+    font-size: 14px;
+    margin: 0;
+  }
+`;
 
 //TODO: move intialSize into Orchestrator props
 const initialSize = { width: 300, height: 150 };
@@ -133,9 +226,16 @@ const usePointerEventListener = (elRef, eventHandler, opts) => {
   }, [pointer]);
   return [pointer, [listening, setListening]];
 };
+const snapAll = (toSnap, granularity) => {
+  return toSnap.map(x => snap(x, granularity));
+};
 const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
   className += " Orchestrator";
   //offset from origin (0, 0)
+  //relative to top-left of screen, in pixels.
+
+  //const offsetForScreen = getSnappedCoords(width / 2, height / 2, cellSize)
+  const [swoopToOrigin, setSwoopToOrigin] = useState(true);
   const [{ ox, oy }, setOffset] = useState({ ox: 0, oy: 0 });
   const [{ oxLast, oyLast }, setLastOffset] = useState({
     oxLast: 0,
@@ -147,6 +247,24 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
   const [frame, setFrame] = useState(0);
   //grid cell size
   const [cellSize, setCellSize] = useState(40);
+
+  useEffect(() => {
+    if (swoopToOrigin) {
+      const [nx, ny] = snapAll([width / 2, height / 2], cellSize);
+      setOffset(({ ox, oy }) => {
+        const x = ox + (nx - ox) / 8;
+        const y = oy + (ny - oy) / 8;
+        if (Math.abs(x - width / 2) < 2 && Math.abs(y - height / 2) < 2) {
+          setSwoopToOrigin(false);
+        }
+        return {
+          ox: x,
+          oy: y
+        };
+      });
+    }
+  }, [cellSize, width, height, swoopToOrigin, frame]);
+
   const [filesAsImgProps, setFilesAsImgProps] = useState([]);
   const [namespace, setNamespace] = useLocalStorage(
     "kanvas-studio-namespace",
@@ -186,7 +304,7 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
   );
   const [
     pointer,
-    [listeningToPointer, setListeningToPointer]
+    [listeningToPointer, setListenToPointer]
   ] = usePointerEventListener(
     elCanvasContainer,
     pointer => {
@@ -202,6 +320,11 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
       //e.g. keep the offset from resetting back to 0,0.
       if (!pointer.isDown) {
         setLastOffset({ oxLast: ox, oyLast: oy });
+      } else {
+        if (swoopToOrigin) {
+          setLastOffset({ oxLast: ox, oyLast: oy });
+          setSwoopToOrigin(false);
+        }
       }
     },
     { handleContextMenu: true, logAttachChange: true }
@@ -214,13 +337,6 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
     }, msPerFrame);
   }, [frame]);
 
-  //relative to top-left of screen, in pixels.
-  const getSnappedToGrid = (x, y) => {
-    return {
-      x: ox + snap(x, cellSize),
-      y: oy + snap(y, cellSize)
-    };
-  };
   return (
     <div className={className} ref={elOrchestrator}>
       <div className="hud">
@@ -265,10 +381,10 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
             ctx.strokeStyle = "black";
             ctx.lineWidth = 2;
             ctx.beginPath();
-            const origin = getSnappedToGrid(width / 2, height / 2);
+            // const origin = getSnappedToGrid(width / 2, height / 2);
             //draw.circle(origin.x, origin.y, cellSize/2);
             //ctx.fill();
-            draw.cross(origin.x, origin.y, cellSize * 2);
+            draw.cross(ox, oy, cellSize * 2);
             ctx.stroke();
             ctx.closePath();
 
@@ -281,22 +397,71 @@ const Orchestrator = (styled(({ className = "", resizeThrottleDelay }) => {
           frame={frame}
         />
       </div>
-      <p>
-        offset: {Math.floor(ox / cellSize) + ", " + Math.floor(oy / cellSize)}
-      </p>
-      <button
-        onClick={() => {
-          setListenToResize(!listeningToResize);
-        }}
-      >
-        {listeningToResize ? "Ignore resize" : "Listen to resize"}
-      </button>
+      <ConfigRenderer
+        config={[
+          {
+            label: "Offset:",
+            type: "coords",
+            data: {
+              coords: [Math.floor(ox / cellSize), Math.floor(oy / cellSize)],
+              delimiter: ", ",
+              brackets: "()"
+            }
+          },
+          {
+            label: "Pointer:",
+            type: "coords",
+            data: {
+              coords: [
+                Math.floor((pointer.x - ox) / cellSize),
+                Math.floor((pointer.y - oy) / cellSize)
+              ],
+              delimiter: ", ",
+              brackets: "()"
+            }
+          },
+          {
+            label: "Pointer event listener",
+            type: "button",
+            data: {
+              children: listeningToPointer
+                ? "Ignore pointer"
+                : "Listen to pointer",
+              onClick: () => {
+                setListenToPointer(!listeningToPointer);
+              }
+            }
+          },
+          {
+            label: "View size:",
+            type: "coords",
+            data: {
+              coords: [width, height],
+              delimiter: "x",
+              brackets: "()"
+            }
+          },
+          {
+            label: "Resize event listener",
+            type: "button",
+            data: {
+              children: listeningToResize
+                ? "Ignore resize"
+                : "Listen to resize",
+              onClick: () => {
+                setListenToResize(!listeningToResize);
+              }
+            }
+          }
+        ]}
+      />
       <ProjectInput
         namespace={namespace}
         onApplyChanges={({ namespace }) => {
           setNamespace(namespace);
         }}
       />
+      {/*<ProjectController />*/}
       <button
         onClick={() => {
           debouncedCreateBucketFolder(namespace, data => {
