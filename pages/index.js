@@ -99,14 +99,11 @@ const Orchestrator = (styled(
     const [
       { width, height },
       [listeningToResize, setListenToResize]
-    ] = useGetViewportSizeOnResize(
-      {
-        logAttachChange: true,
-        throttleDelayMs: resizeThrottleDelay,
-        initialSize
-      },
-      [throttle]
-    );
+    ] = useGetViewportSizeOnResize({
+      logAttachChange: true,
+      throttleDelayMs: resizeThrottleDelay,
+      initialSize
+    });
     const [{ x: ox, y: oy }, setOffset] = useState({ x: 0, y: 0 });
     const [{ oxLast, oyLast }, setLastOffset] = useState({
       oxLast: 0,
@@ -206,7 +203,7 @@ const Orchestrator = (styled(
             className="OrchestratorCanvas"
             width={width}
             height={height}
-            hideCursor={true}
+            hideCursor={listeningToPointer}
             resizeEventDrawFn={(ctx, draw) => {
               console.log("after resize draw");
               setCellSize(Math.max(width, height) / gridCellSizeDivisor);
