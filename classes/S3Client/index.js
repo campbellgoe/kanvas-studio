@@ -1,7 +1,7 @@
 //TODO: refactor this file
 
 import S3 from "aws-sdk/clients/s3";
-import envConfig from "../env.config.json";
+import envConfig from "../../env.config.json";
 
 const accessKeyId = envConfig.AWS_CONFIG_KEY;
 const secretAccessKey = envConfig.AWS_CONFIG_SECRET;
