@@ -2,4 +2,6 @@ import useMakeClassInstance from "./useMakeClassInstance.js";
 
 import usePointerEventListener from "./usePointerEventListener.js";
 
-export { useMakeClassInstance, usePointerEventListener };
+import useSwoopToPosition from "./useSwoopToPosition.js";
+
+export { useMakeClassInstance, usePointerEventListener, useSwoopToPosition };

@@ -22,7 +22,11 @@ import ConfigRenderer from "../components/ConfigRenderer";
 
 //hooks
 import useEventListener from "@toolia/use-event-listener"; //for resize
-import { useMakeClassInstance, usePointerEventListener } from "../hooks"; //for making Drawer instance
+import {
+  useMakeClassInstance,
+  usePointerEventListener,
+  useSwoopToPosition
+} from "../hooks"; //for making Drawer instance
 import { useLocalStorage } from "react-use"; //used like useState but saves/loads data in localStorage
 
 //utilities
@@ -76,17 +80,24 @@ const gridCellSizeDivisor = 40; //divisions per width or height (based on which 
 type OrchestratorProps = {
   className: string,
   resizeThrottleDelay: number,
-  initialSize: { width: number, height: number }
+  initialSize: { width: number, height: number },
+  swoopToOriginOnStart: boolean
 };
+
 const Orchestrator = (styled(
-  ({ className = "", resizeThrottleDelay, initialSize }) => {
+  ({
+    className = "",
+    resizeThrottleDelay,
+    initialSize,
+    swoopToOriginOnStart = true
+  }) => {
     className += " Orchestrator";
     //offset from origin (0, 0)
     //relative to top-left of screen, in pixels.
 
     //const offsetForScreen = getSnappedCoords(width / 2, height / 2, cellSize)
-    const [swoopToOrigin, setSwoopToOrigin] = useState(true);
-    const [{ ox, oy }, setOffset] = useState({ ox: 0, oy: 0 });
+
+    const [{ x: ox, y: oy }, setOffset] = useState({ x: 0, y: 0 });
     const [{ oxLast, oyLast }, setLastOffset] = useState({
       oxLast: 0,
       oyLast: 0
@@ -97,24 +108,16 @@ const Orchestrator = (styled(
     const [frame, setFrame] = useState(0);
     //grid cell size
     const [cellSize, setCellSize] = useState(40);
-
-    useEffect(() => {
-      if (swoopToOrigin) {
-        const [nx, ny] = snapAll([width / 2, height / 2], cellSize);
-        setOffset(({ ox, oy }) => {
-          const x = ox + (nx - ox) / 8;
-          const y = oy + (ny - oy) / 8;
-          if (Math.abs(x - width / 2) < 2 && Math.abs(y - height / 2) < 2) {
-            setSwoopToOrigin(false);
-          }
-          return {
-            ox: x,
-            oy: y
-          };
-        });
-      }
-    }, [cellSize, width, height, swoopToOrigin, frame]);
-
+    //set offset to make the origin appear in the center of the screen, with ease in animation.
+    const [swoopToOrigin, setSwoopToOrigin] = useSwoopToPosition(
+      () => {
+        const [x, y] = snapAll([width / 2, height / 2], cellSize);
+        return { x, y };
+      },
+      setOffset,
+      { swoopOnStart: swoopToOriginOnStart },
+      [cellSize, width, height, frame]
+    );
     const [filesAsImgProps, setFilesAsImgProps] = useState([]);
     const [namespace, setNamespace] = useLocalStorage(
       "kanvas-studio-namespace",
@@ -162,8 +165,8 @@ const Orchestrator = (styled(
         if (pointer.isDrag) {
           //change x,y canvas offset
           setOffset({
-            ox: pointer.x - pointer.downX + oxLast,
-            oy: pointer.y - pointer.downY + oyLast
+            x: pointer.x - pointer.downX + oxLast,
+            y: pointer.y - pointer.downY + oyLast
           });
         }
         //on mouse up, save last offset x,y and add that to the offset when dragging.
@@ -423,6 +426,7 @@ const KanvasStudio = (styled(({ className = "" }) => {
         className="KanvasStudioOrchestrator"
         resizeThrottleDelay={300}
         initialSize={initialSize}
+        swoopToOriginOnStart={true}
       />
     </div>
   );
