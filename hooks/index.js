@@ -1,3 +1,5 @@
-import useMakeClassInstance from './useMakeClassInstance.js';
+import useMakeClassInstance from "./useMakeClassInstance.js";
 
-export { useMakeClassInstance };
+import usePointerEventListener from "./usePointerEventListener.js";
+
+export { useMakeClassInstance, usePointerEventListener };
