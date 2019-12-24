@@ -19,22 +19,22 @@ import ImageInput from "../components/ImageInput";
 import ProjectInput from "../components/ProjectInput";
 import Sync from "../components/Sync";
 import ConfigRenderer from "../components/ConfigRenderer";
+import Canvas from "../components/Canvas";
 
 //hooks
 import {
-  useMakeClassInstance,
   usePointerEventListener,
   useSwoopToPosition,
   useGetViewportSizeOnResize
-} from "../hooks"; //for making Drawer instance
+} from "../hooks";
 import { useLocalStorage } from "react-use"; //used like useState but saves/loads data in localStorage
 
 //utilities
 import { throttle, debounce } from "throttle-debounce";
 import { safelyCallAndSetState } from "../utils";
 import snap, { snapAll } from "../utils/snap";
+
 //classes
-import Drawer from "../classes/Drawer"; //common methods for drawing on 2d canvas
 //TODO: need to refactor S3Client
 import {
   //aka list namespaces
@@ -354,59 +354,6 @@ const Orchestrator = (styled(
     flex-direction: column;
   }
 `: ComponentType<OrchestratorProps>);
-type CanvasProps = {
-  className: string,
-  width: number,
-  height: number,
-  resizeEventDrawFn: function,
-  animationFrameDrawFn: function,
-  frame: number,
-  hideCursor?: boolean
-};
-const Canvas = (styled(
-  ({
-    className = "",
-    width = 300,
-    height = 150,
-    resizeEventDrawFn,
-    animationFrameDrawFn,
-    frame = 0,
-    hideCursor = false
-  }) => {
-    className += " Canvas";
-    const elCanvas = useRef(null);
-    const [ctx, setCtx] = useState(null);
-    const [setupData, setSetupData] = useState(null);
-    const draw = useMakeClassInstance(Drawer, [ctx]);
-    //initially get canvas, context, and draw.
-    useEffect(() => {
-      const canvas = elCanvas.current;
-      if (canvas) {
-        const context = canvas.getContext("2d");
-        setCtx(context);
-      }
-    }, []);
-
-    useEffect(() => {
-      const canvas = elCanvas.current;
-      if (canvas && (canvas.width !== width || canvas.height !== height)) {
-        canvas.width = width;
-        canvas.height = height;
-        //because setting width/height clears the canvas, calling resizeEventDrawFn again
-        safelyCallAndSetState(resizeEventDrawFn, setSetupData, ctx, draw);
-      }
-    }, [width, height, ctx, draw, resizeEventDrawFn]);
-    useEffect(() => {
-      if (ctx && draw && frame) {
-        animationFrameDrawFn(ctx, draw, frame, setupData);
-      }
-    }, [ctx, draw, animationFrameDrawFn, frame]);
-    return <canvas className={className} ref={elCanvas} />;
-  }
-)`
-  background-color: white;
-  ${({ hideCursor }) => (hideCursor ? "cursor: none;" : "")}
-`: ComponentType<CanvasProps>);
 
 type KanvasStudioProps = {
   className: string
