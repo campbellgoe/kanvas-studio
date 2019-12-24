@@ -23,16 +23,14 @@ function useSwoopToPosition(
   );
   useEffect(() => {
     if (swoopToPosition) {
-      console.log("swoop...");
       const { x: targetX, y: targetY }: PointType = position();
       setPosition(({ x: currentX, y: currentY }) => {
         const outputX = currentX + (targetX - currentX) / easeAmount;
         const outputY = currentY + (targetY - currentY) / easeAmount;
         if (typeof onTargetReached == "function") {
           const dist = Math.sqrt(
-            (outputX - targetX) ** 2 + (outputY - targetY) ** 2
+            Math.abs(outputX - targetX) ** 2 + Math.abs(outputY - targetY) ** 2
           );
-          console.log("dist:", dist);
           if (dist < targetRadius) {
             onTargetReached(dist);
           }

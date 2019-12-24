@@ -116,7 +116,7 @@ const Orchestrator = (styled(
       setOffset,
       {
         swoopOnStart: swoopToOriginOnStart,
-        easeAmount: 20
+        easeAmount: 4
         //onTargetReached: () => setSwoopToOrigin(false)
       },
       [cellSize, width, height, frame, ox, oy]
