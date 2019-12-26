@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useCallback } from "react";
 import styled from "styled-components";
-import { useStateValue } from "../../utils/useStateValue";
+import { useSelector, useDispatch } from "react-redux";
 import getBoxShadow from "../../utils/getBoxShadow";
 import svgIcons from "../../svg/icons";
 const {
@@ -12,10 +12,28 @@ const {
 
 const ToastContainer = styled(({ className = "" }) => {
   className += " ToastContainer";
-  const [{ cards }, dispatch] = useStateValue();
+  const notifications = useSelector(state => state.notifications);
+  const dispatch = useDispatch();
+  const keepNotificationAlive = useCallback(
+    key => {
+      dispatch("DONT_AUTOCLOSE_TOAST_CARD", {
+        key
+      });
+    },
+    [dispatch]
+  );
+  const removeNotification = useCallback(
+    key => {
+      dispatch("REMOVE_TOAST_CARD", {
+        key,
+        removeType: "manual"
+      });
+    },
+    [dispatch]
+  );
   return (
     <div className={className}>
-      {Array.from(cards, ([key, card], index) => {
+      {Array.from(notifications, ([key, card], index) => {
         card = { ...card, ...dataFromType(card.type) };
         return (
           <Toast
@@ -23,17 +41,8 @@ const ToastContainer = styled(({ className = "" }) => {
             className="ToastCard"
             key={key}
             {...card}
-            onClickBody={() => {
-              dispatch("DONT_AUTOCLOSE_TOAST_CARD", {
-                key
-              });
-            }}
-            onClose={() => {
-              dispatch("REMOVE_TOAST_CARD", {
-                key,
-                removeType: "manual"
-              });
-            }}
+            onClickBody={() => keepNotificationAlive(key)}
+            onClose={() => removeNotification(key)}
           />
         );
       })}

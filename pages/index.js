@@ -159,6 +159,7 @@ const Orchestrator = (styled(
       "kanvas-studio-namespace",
       ""
     );
+    //TODO: use URL.revokeObjectURL(objectURL) to unload images
     //TODO: useRedux instead and make it projectData which contains namespace/folder and s3 objects within that folder.
     const [liveNamespaces, setLiveNamespaces] = useState([]);
     const [prevSyncTime, setPrevSyncTime] = useState("Never");
