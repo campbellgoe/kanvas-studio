@@ -40,6 +40,8 @@ import getDist from "../utils/getDist";
 import {
   //aka list namespaces
   listBucketFolders,
+  //list all objects/files within a folder
+  getNearestObjects,
   //aka create new namespace
   createBucketFolder,
   //upload file to a given namespace
@@ -56,6 +58,11 @@ const throttledListBucketFolders = throttle(
   1000 * minimumSecondsPerSync,
   listBucketFolders
 );
+
+// const throttledgetNearestObjects = throttle(
+//   1000 * minimumSecondsPerSync,
+//   getNearestObjects
+// );
 //only create the last bucket folder if a burst of requests to create bucket folders are made
 const debouncedCreateBucketFolder = debounce(
   1000 * minimumSecondsPerSync,
@@ -152,12 +159,18 @@ const Orchestrator = (styled(
       "kanvas-studio-namespace",
       ""
     );
-    //TODO: useRedux instead and make it projectData which contains namespace data.
+    //TODO: useRedux instead and make it projectData which contains namespace/folder and s3 objects within that folder.
     const [liveNamespaces, setLiveNamespaces] = useState([]);
     const [prevSyncTime, setPrevSyncTime] = useState("Never");
     const onSync = () => {
       //set namespaces listed in the S3 bucket
       throttledListBucketFolders(setLiveNamespaces);
+      console.log("namespace:", namespace);
+      getNearestObjects(namespace, { x: 0, y: 0, range: 99999 }).then(
+        objects => {
+          console.log("photos:", objects);
+        }
+      );
       setPrevSyncTime(Date.now());
     };
     useEffect(() => {
@@ -275,7 +288,12 @@ const Orchestrator = (styled(
                       <ImageInput
                         onChange={files => {
                           setFilesForUpload(files);
-                          debouncedUploadFile(namespace, files);
+                          debouncedUploadFile(namespace, files, {
+                            position: JSON.stringify({
+                              x: Math.round(ox),
+                              y: Math.round(oy)
+                            })
+                          });
                           //close menu
                           setPointerMenu(null);
                           //reset pointer (start listening to them again)
@@ -284,17 +302,6 @@ const Orchestrator = (styled(
                         }}
                       />
                     )
-                    // data: {
-                    //   children: "Upload image",
-                    //   onClick: () => {
-                    //     console.log("close menu");
-                    //     setPointerMenu(null);
-                    //     uploadFile()
-                    //     //reset pointer (start listening to them again)
-                    //     setPointer(null);
-                    //     setListenToPointer(true);
-                    //   }
-                    // }
                   }
                 ]}
               />

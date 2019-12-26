@@ -2,11 +2,24 @@
 
 import S3 from "aws-sdk/clients/s3";
 import envConfig from "../../env.config.json";
+import getDist from "../../utils/getDist";
+
+//polyfill Promise.allSettled
+const allSettled = promises => {
+  let wrappedPromises = promises.map(({ promise, metadata }) =>
+    Promise.resolve(promise).then(
+      val => ({ status: "fulfilled", value: val, metadata }),
+      err => ({ status: "rejected", reason: err, metadata })
+    )
+  );
+  return Promise.all(wrappedPromises);
+};
 
 const accessKeyId = envConfig.AWS_CONFIG_KEY;
 const secretAccessKey = envConfig.AWS_CONFIG_SECRET;
 
-const bucketName = "massless.solutions";
+const bucketName = envConfig.S3_BUCKET_NAME;
+
 const s3config = {
   credentials: {
     accessKeyId,
@@ -105,8 +118,134 @@ function listBucketFolders(cb) {
     }
   });
 }
+function getObjectMetadata({ photoKey, src }) {
+  // return new Promise((resolve, reject) => {
+  //   s3.headObject({ Bucket: bucketName, Key: photoKey }, function(err, data) {
+  //     const resData = JSON.stringify(this.httpResponse.headers);
+  //     console.log("getObjectMetadata headers", resData);
+  //     if (err) {
+  //       return reject(err);
+  //     }
+  //     resolve({
+  //       data,
+  //       src
+  //     });
+  //   });
+  // });
+}
+function getFolderKey(namespace) {
+  return encodeURIComponent(namespace) + "/";
+}
+async function getMetadata(namespace) {
+  const folderKey = getFolderKey(namespace);
+  try {
+    const data = await s3
+      .getObject({ Key: folderKey + "metadata.json" })
+      .promise();
+    //return metadata
+    return JSON.parse(data.Body.toString());
+  } catch (err) {
+    console.error("Error fetching metadata.json;", err);
+    return null;
+  }
+}
+function getSrcFromResponse(res) {
+  const blob = new Blob([res.Body], { type: res.ContentType });
+  const src = URL.createObjectURL(blob); //possibly `webkitURL` or another vendor prefix for old browsers.
+  return src;
+}
+//get nearest files within a range
+async function getNearestObjects(namespace, { x, y, range = 1000 }) {
+  //first get metadata for this folder
+  const metadataMap = await getMetadata(namespace);
+  console.log("metadataMap:", metadataMap);
+  //metadata is an array of arrays which contains [fileKey, position]
+  //for every position that is within range, get that file using the fileKey
+  //sort the metadata so that the closest are loaded first
+  const objects = metadataMap
+    .map(([key, position]) => {
+      //WARN: this mapping function assumes the metadata for this key is only the x, y position.
+      //get dist from the given x, y which come from the canvas offset (aka camera position).
+      const distance = getDist(position, { x, y });
+      return {
+        key,
+        position,
+        distance
+      };
+    })
+    .filter(({ distance }) => {
+      //get files only within a certain range of the camera
+      return distance < range;
+    })
+    .sort((a, b) => {
+      //sort so that the closest files are loaded first
+      return a.distance - b.distance;
+    });
 
-function uploadFile(bucketFolderName, files) {
+  //now have an array of { key, position, distance } within a given range
+  //and want to get the actual object
+  const promises = objects.map(({ key, position, distance }) => {
+    return {
+      promise: s3.getObject({ Key: key }).promise(),
+      metadata: {
+        key,
+        position,
+        distance
+      }
+    };
+  });
+  const settled = await allSettled(promises);
+  return settled.map(({ status, value, reason, metadata }) => {
+    if (status === "rejected") {
+      console.warn("Couldn't load ", metadata.key, "\r\nReason:\r\n", reason);
+      return Error(reason);
+    }
+    const src = getSrcFromResponse(value);
+    return {
+      src,
+      metadata
+    };
+  });
+
+  // return new Promise((resolve, reject) => {
+  //   const folderKey = getFolderKey(namespace);
+
+  //   s3.listObjects({ Prefix: folderKey, Delimiter: "/" }, function(
+  //     err,
+  //     data
+  //   ) {
+  //     const resData = JSON.stringify(this.httpResponse.headers);
+  //     console.log("listFolders headers", resData);
+  //     if (err) {
+  //       console.error("There was an error viewing your album: " + err.message);
+  //       return reject(err);
+  //     }
+  //     console.log("listObjects data:", data);
+  //     // 'this' references the AWS.Response instance that represents the response
+  //     const href = this.request.httpRequest.endpoint.href;
+  //     const bucketUrl = href + bucketName + "/";
+
+  //     const photos = data.Contents.map(function(photo) {
+  //       let photoKey = photo.Key;
+  //       const photoUrl = bucketUrl + photoKey;
+  //       return {
+  //         src: photoUrl,
+  //         photoKey
+  //       };
+  //     });
+  //     //if (!getMetadata) {
+  //     resolve(photos);
+  //     //} else {
+
+  //     // Promise.all(photos.map(photo => getObjectMetadata(photo)))
+  //     //   .then(resolve)
+  //     //   .catch(reject);
+  //     //}
+  //   });
+  // });
+}
+
+function uploadFile(bucketFolderName, files, metadata = {}) {
   if (!files.length) {
     return console.warn("Please choose a file to upload first.");
   }
@@ -127,7 +266,8 @@ function uploadFile(bucketFolderName, files) {
         Bucket: bucketName,
         Key: photoKey,
         Body: file,
-        ACL: "public-read"
+        ACL: "public-read",
+        Metadata: metadata
       }
     }
   });
@@ -137,7 +277,8 @@ function uploadFile(bucketFolderName, files) {
         Bucket: bucketName,
         Key: photoKey,
         Body: file,
-        ACL: "public-read"
+        ACL: "public-read",
+        Metadata: metadata
       }
     },
     (err, data) => {
@@ -182,4 +323,4 @@ function createBucketFolder(bucketFolderName, cb) {
   });
 }
 
-export { listBucketFolders, createBucketFolder, uploadFile };
+export { listBucketFolders, getNearestObjects, createBucketFolder, uploadFile };
