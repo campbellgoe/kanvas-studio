@@ -20,6 +20,7 @@ const makeConfigItem = (
   return [type, configItem];
 };
 const typeToConfigItemMap: any = new Map([
+  makeConfigItem("jsx", jsx => jsx),
   makeConfigItem(
     "button",
     button => {

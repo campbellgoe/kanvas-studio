@@ -270,17 +270,31 @@ const Orchestrator = (styled(
               <ConfigRenderer
                 config={[
                   {
-                    type: "button",
-                    data: {
-                      children: "Upload image",
-                      onClick: () => {
-                        console.log("close menu");
-                        setPointerMenu(null);
-                        //reset pointer (start listening to them again)
-                        setPointer(null);
-                        setListenToPointer(true);
-                      }
-                    }
+                    type: "jsx",
+                    data: (
+                      <ImageInput
+                        onChange={files => {
+                          setFilesForUpload(files);
+                          debouncedUploadFile(namespace, files);
+                          //close menu
+                          setPointerMenu(null);
+                          //reset pointer (start listening to them again)
+                          setPointer(null);
+                          setListenToPointer(true);
+                        }}
+                      />
+                    )
+                    // data: {
+                    //   children: "Upload image",
+                    //   onClick: () => {
+                    //     console.log("close menu");
+                    //     setPointerMenu(null);
+                    //     uploadFile()
+                    //     //reset pointer (start listening to them again)
+                    //     setPointer(null);
+                    //     setListenToPointer(true);
+                    //   }
+                    // }
                   }
                 ]}
               />
