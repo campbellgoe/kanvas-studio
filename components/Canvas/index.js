@@ -17,7 +17,9 @@ type CanvasProps = {
   resizeEventDrawFn: function,
   animationFrameDrawFn: function,
   frame: number,
-  hideCursor?: boolean
+  hideCursor?: boolean,
+  onMouseOver?: function,
+  onMouseOut?: function
 };
 const Canvas = (styled(
   ({
@@ -27,7 +29,9 @@ const Canvas = (styled(
     resizeEventDrawFn,
     animationFrameDrawFn,
     frame = 0,
-    hideCursor = false
+    hideCursor = false,
+    onMouseOut = Function.prototype,
+    onMouseOver = Function.prototype
   }) => {
     className += " Canvas";
     const elCanvas = useRef(null);
@@ -57,7 +61,14 @@ const Canvas = (styled(
         animationFrameDrawFn(ctx, draw, frame, setupData);
       }
     }, [ctx, draw, animationFrameDrawFn, frame]);
-    return <canvas className={className} ref={elCanvas} />;
+    return (
+      <canvas
+        className={className}
+        ref={elCanvas}
+        onMouseEnter={onMouseOver}
+        onMouseOut={onMouseOut}
+      />
+    );
   }
 )`
   background-color: white;
