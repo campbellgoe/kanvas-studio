@@ -39,5 +39,43 @@ class Drawer {
     this.line(x, y - size, x, y + size);
     this.line(x - size, y, x + size, y);
   }
+  polygon(...args: Array<number>) {
+    if (args.length % 2 === 1)
+      throw new Error(
+        "Odd number of arguments. Only accepts sets of 2 arguments each representing x, y coordinates."
+      );
+    const [startX, startY] = args.slice(0, 2);
+    const points = args.slice(2);
+    const ctx = this.ctx;
+    const nPoints = points.length;
+    ctx.moveTo(startX, startY);
+    for (let i = 0; i < nPoints; i += 2) {
+      const x = points[i];
+      const y = points[i + 1];
+      ctx.lineTo(x, y);
+    }
+  }
+  supperfluousCrosshair(pointer: any, size: number) {
+    const ctx = this.ctx;
+    const draw = this;
+    const { x, y, isDown } = pointer;
+    ctx.beginPath();
+    ctx.globalCompositeOperation = "xor";
+    ctx.fillStyle = isDown ? "red" : "black";
+    ctx.lineWidth = 2;
+    const dm = isDown ? 0 : 1;
+    //draw.circle(pointer.x, pointer.y, 5);
+    //left
+    draw.polygon(x - size / 2 - dm, y - 2, x - size / 2 - dm, y + 2, x - dm, y);
+    //top
+    draw.polygon(x - 2, y - size / 2 - dm, x + 2, y - size / 2 - dm, x, y - dm);
+    //right
+    draw.polygon(x + size / 2 + dm, y - 2, x + size / 2 + dm, y + 2, x + dm, y);
+    //bottom
+    draw.polygon(x - 2, y + size / 2 + dm, x + 2, y + size / 2 + dm, x, y + dm);
+    ctx.fill();
+    ctx.closePath();
+    ctx.globalCompositeOperation = "source-over";
+  }
 }
 export default Drawer;
