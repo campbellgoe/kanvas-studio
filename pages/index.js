@@ -77,17 +77,13 @@ const secondsPerSync = 60; //this automatically makes api call to AWS, so be car
 type PointerMenuProps = {
   className: string,
   position: { x: number, y: number },
-  closeMenu: function
+  children: any
 };
 const PointerMenu = ({
   className = "",
   position: { x, y },
-  closeMenu
+  children
 }: PointerMenuProps) => {
-  const uploadImage = useCallback(() => {
-    console.log("upload image!");
-    closeMenu();
-  });
   return (
     <div
       className={className}
@@ -97,7 +93,7 @@ const PointerMenu = ({
         top: y + "px"
       }}
     >
-      <button onClick={uploadImage}>Upload image</button>
+      {children}
     </div>
   );
 };
@@ -228,7 +224,7 @@ const Orchestrator = (styled(
             const onUp = () => {
               //setPointerMenu({ x: pointer.x, y: pointer.y });
               if (pointer.downControlType === "right") {
-                setPointerMenu({ x: pointer.x, y: pointer.y });
+                setPointerMenu({ position: { x: pointer.x, y: pointer.y } });
               }
             };
             onUp();
@@ -269,15 +265,26 @@ const Orchestrator = (styled(
           {pointerMenu && (
             <PointerMenu
               className="OrchestratorPointerMenu"
-              closeMenu={() => {
-                console.log("close menu");
-                setPointerMenu(null);
-                //reset pointer (start listening to them again)
-                setPointer(null);
-                setListenToPointer(true);
-              }}
-              position={pointerMenu}
-            />
+              position={pointerMenu.position}
+            >
+              <ConfigRenderer
+                config={[
+                  {
+                    type: "button",
+                    data: {
+                      children: "Upload image",
+                      onClick: () => {
+                        console.log("close menu");
+                        setPointerMenu(null);
+                        //reset pointer (start listening to them again)
+                        setPointer(null);
+                        setListenToPointer(true);
+                      }
+                    }
+                  }
+                ]}
+              />
+            </PointerMenu>
           )}
           <Canvas
             className="OrchestratorCanvas"
