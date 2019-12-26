@@ -4,22 +4,25 @@ import { pointInput as registerPointEventListeners } from "../utils";
 const usePointerEventListener = (elRef, eventHandler, opts) => {
   const [listening, setListening] = useState(true);
   const memoizedCallback = useCallback(eventHandler, [eventHandler]);
-  const [pointer, setPointer] = useState({});
-  //const [unregisterFn, setUnregisterFn] = useState(null);
+  const [pointerPrev, setPointerPrev] = useState({});
+  const [pointer, setPointer] = useState(null);
+  //register / unregister event listeners
   useEffect(() => {
     if (elRef && listening) {
       const unregisterPointEventListeners = registerPointEventListeners(
         elRef.current,
         opts,
-        pointer => {
-          setPointer(pointer);
+        pointerNext => {
+          setPointer(pointerNext);
         }
       );
       return unregisterPointEventListeners;
     }
   }, [elRef, listening]);
+  //when pointer changes, call eventHandler
   useEffect(() => {
-    memoizedCallback(pointer);
+    setPointerPrev({ ...pointer });
+    memoizedCallback(pointer, pointerPrev);
   }, [pointer]);
   return [
     [pointer, setPointer],

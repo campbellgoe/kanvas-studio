@@ -33,6 +33,7 @@ import { useLocalStorage } from "react-use"; //used like useState but saves/load
 import { throttle, debounce } from "throttle-debounce";
 import { safelyCallAndSetState } from "../utils";
 import snap, { snapAll } from "../utils/snap";
+import getDist from "../utils/getDist";
 
 //classes
 //TODO: need to refactor S3Client
@@ -73,6 +74,34 @@ const syncEnabledInitially = false;
 const msPerFrame = 30;
 const secondsPerSync = 60; //this automatically makes api call to AWS, so be careful not to set it too low.
 
+type PointerMenuProps = {
+  className: string,
+  position: { x: number, y: number },
+  closeMenu: function
+};
+const PointerMenu = ({
+  className = "",
+  position: { x, y },
+  closeMenu
+}: PointerMenuProps) => {
+  const uploadImage = useCallback(() => {
+    console.log("upload image!");
+    closeMenu();
+  });
+  return (
+    <div
+      className={className}
+      style={{
+        position: "absolute",
+        left: x + "px",
+        top: y + "px"
+      }}
+    >
+      <button onClick={uploadImage}>Upload image</button>
+    </div>
+  );
+};
+
 //TODO: define initialSize via deviceType e.g. mobile will be something like 480×800 whereas xtop will be more like 1400x800
 //TODO: also actually apply the initialSize to the canvas width/height attributes for SSR first render.
 const initialSize = { width: 480, height: 800 };
@@ -86,6 +115,7 @@ type OrchestratorProps = {
 const Orchestrator = (styled(
   ({ className = "", initialSize, swoopToOriginOnStart = true }) => {
     className += " Orchestrator";
+    const [pointerMenu, setPointerMenu] = useState(null);
     //offset from origin (0, 0)
     //relative to top-left of screen, in pixels.
 
@@ -144,9 +174,10 @@ const Orchestrator = (styled(
       [listeningToPointer, setListenToPointer]
     ] = usePointerEventListener(
       elCanvasContainer,
-      pointer => {
-        const lox = pointer.x - pointer.downX + oxLast;
-        const loy = pointer.y - pointer.downY + oyLast;
+      (pointer, prevPointer) => {
+        if (pointer === null) return console.warn("pointer is null");
+        const lox = pointer.x - pointer.downPos.x + oxLast;
+        const loy = pointer.y - pointer.downPos.y + oyLast;
         //console.log('pointer:', pointer);
         if (pointer.isDrag) {
           //change x,y canvas offset
@@ -164,14 +195,44 @@ const Orchestrator = (styled(
         //on mouse up, save last offset x,y and add that to the offset when dragging.
         //e.g. keep the offset from resetting back to 0,0.
         if (pointer.isDown) {
+          const onDown = () => {
+            // if(pointer.downControlType === 'right'){
+            //   setPointerMenu({ x: pointer.x, y: pointer.y });
+            // }
+            if (pointer.downControlType !== "right") {
+              setPointerMenu(null);
+            }
+          };
+          onDown();
+
           //if user clicks down while swooping, stop swooping
           //(and release the mouse so that next lastOffset is set on the correct frame, to stop a frame jump)
           if (swoopToOrigin) {
             setSwoopToOrigin(false);
-            setPointer(pointer => ({ ...pointer, isDown: false }));
+            setPointer(pointer => ({
+              ...pointer,
+              isDown: false
+            }));
           }
         } else {
+          //on mouse up
+
           setLastOffset({ oxLast: ox, oyLast: oy });
+          const tapRadius = 2;
+          if (
+            prevPointer.isDown === true &&
+            pointer.isDown === false &&
+            getDist(pointer, { x: pointer.downPos.x, y: pointer.downPos.y }) <
+              tapRadius
+          ) {
+            const onUp = () => {
+              //setPointerMenu({ x: pointer.x, y: pointer.y });
+              if (pointer.downControlType === "right") {
+                setPointerMenu({ x: pointer.x, y: pointer.y });
+              }
+            };
+            onUp();
+          }
         }
       },
       { handleContextMenu: true, logAttachChange: true }
@@ -183,7 +244,6 @@ const Orchestrator = (styled(
         setFrame(frame + 1);
       }, msPerFrame);
     }, [frame]);
-
     return (
       <div className={className}>
         <div className="hud">
@@ -206,11 +266,26 @@ const Orchestrator = (styled(
           )}
         </div>
         <div className="OrchestratorCanvasContainer" ref={elCanvasContainer}>
+          {pointerMenu && (
+            <PointerMenu
+              className="OrchestratorPointerMenu"
+              closeMenu={() => {
+                console.log("close menu");
+                setPointerMenu(null);
+                //reset pointer (start listening to them again)
+                setPointer(null);
+                setListenToPointer(true);
+              }}
+              position={pointerMenu}
+            />
+          )}
           <Canvas
             className="OrchestratorCanvas"
             width={width}
             height={height}
             hideCursor={listeningToPointer}
+            onMouseOut={() => setListenToPointer(false)}
+            onMouseOver={() => setListenToPointer(true)}
             resizeEventDrawFn={(ctx, draw) => {
               console.log("after resize draw");
               setCellSize(Math.max(width, height) / gridCellSizeDivisor);
@@ -235,12 +310,20 @@ const Orchestrator = (styled(
               draw.cross(ox, oy, cellSize * 2);
               ctx.stroke();
               ctx.closePath();
-
-              ctx.beginPath();
-              ctx.fillStyle = pointer.isDown ? "red" : "black";
-              draw.circle(pointer.x, pointer.y, 5);
-              ctx.fill();
-              ctx.closePath();
+              //if pointer, draw it
+              if (pointer && listeningToPointer) {
+                const { isDown } = pointer;
+                //draw.supperfluousCrosshair(pointer, cellSize);
+                ctx.beginPath();
+                ctx.globalCompositeOperation = "xor";
+                ctx.fillStyle = isDown ? "red" : "black";
+                ctx.lineWidth = 2;
+                const dm = isDown ? 0 : 1;
+                draw.circle(pointer.x, pointer.y, 5);
+                ctx.fill();
+                ctx.closePath();
+                ctx.globalCompositeOperation = "source-over";
+              }
             }}
             frame={frame}
           />
@@ -260,10 +343,12 @@ const Orchestrator = (styled(
               label: "Pointer:",
               type: "coords",
               data: {
-                coords: [
-                  Math.floor((pointer.x - ox) / cellSize),
-                  Math.floor((pointer.y - oy) / cellSize)
-                ],
+                coords: pointer
+                  ? [
+                      Math.floor((pointer.x - ox) / cellSize),
+                      Math.floor((pointer.y - oy) / cellSize)
+                    ]
+                  : ["?", "?"],
                 delimiter: ", ",
                 brackets: "()"
               }
