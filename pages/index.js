@@ -11,7 +11,7 @@ import React, {
   useCallback,
   type ComponentType
 } from "react";
-import { CREATE_TOAST_CARD } from "../redux/actions.js";
+import { createToastCard, setNamespace } from "../redux/actions.js";
 import { useDispatch, useSelector } from "react-redux";
 
 import styled from "styled-components";
@@ -123,8 +123,6 @@ const Orchestrator = (styled(
     className += " Orchestrator";
     const dispatch = useDispatch();
 
-    const createToastCard = payload =>
-      dispatch({ type: CREATE_TOAST_CARD, payload });
     const [pointerMenu, setPointerMenu] = useState(null);
     //offset from origin (0, 0)
     //relative to top-left of screen, in pixels.
@@ -166,8 +164,7 @@ const Orchestrator = (styled(
     //TODO: use URL.revokeObjectURL(objectURL) to unload images
     //TODO: useRedux instead and make it projectData which contains namespace/folder and s3 objects within that folder.
     const project = useSelector(state => state.project);
-    const [namespace, setNamespace] = useState(project.namespace);
-
+    const namespace = project.namespace;
     const [liveNamespaces, setLiveNamespaces] = useState([]);
     const [prevSyncTime, setPrevSyncTime] = useState("Never");
     const onSync = () => {
@@ -177,10 +174,12 @@ const Orchestrator = (styled(
       getNearestObjects(namespace, { x: 0, y: 0, range: 99999 }).then(
         objects => {
           console.log("photos:", objects);
-          createToastCard({
-            text: `Found ${objects.length} nearby files.`,
-            type: "info"
-          });
+          dispatch(
+            createToastCard({
+              text: `Found ${objects.length} nearby files.`,
+              type: "info"
+            })
+          );
         }
       );
       setPrevSyncTime(Date.now());
@@ -431,7 +430,7 @@ const Orchestrator = (styled(
         <ProjectInput
           namespace={namespace}
           onApplyChanges={({ namespace }) => {
-            setNamespace(namespace);
+            dispatch(setNamespace(namespace));
           }}
         />
         {/*<ProjectController />*/}

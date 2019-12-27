@@ -1,8 +1,9 @@
-const SET_NAMESPACE = "SET_NAMESPACE";
-const SET_OBJECT = "SET_OBJECT";
-const DELETE_OBJECT = "DELETE_OBJECT";
-const MOVE_OBJECT = "MOVE_OBJECT";
-
+import {
+  SET_NAMESPACE,
+  SET_OBJECT,
+  DELETE_OBJECT,
+  MOVE_OBJECT
+} from "../actions.js";
 const initialState = {
   namespace: "ahey",
   updatedAt: "Never",
