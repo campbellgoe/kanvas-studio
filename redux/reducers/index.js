@@ -1,5 +1,5 @@
 import { combineReducers } from "redux";
 import notifications from "./notifications";
-import rooms from "./rooms";
+import project from "./project";
 
-export default combineReducers({ rooms, notifications });
+export default combineReducers({ project, notifications });
