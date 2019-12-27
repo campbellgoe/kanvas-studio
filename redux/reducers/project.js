@@ -9,10 +9,10 @@ const initialState = {
   updatedAt: "Never",
   objects: new Map([["infinity.png", { x: 100, y: 200 }]])
 };
-const mustHave = (action, property, mustBeOfType, suffix) => {
+const mustHave = (action, property, mustBeOfType, suffix = "") => {
   if (typeof action[property] != mustBeOfType) {
     throw new TypeError(
-      `${action.type}: must have ${property} ${mustBeOfType}${suffix}.`
+      `${action.type}: must have property '${property}' of type '${mustBeOfType}'${suffix}.`
     );
   }
 };
@@ -35,7 +35,7 @@ const mustHaveOfShape = (action, property, ofShape) => {
 const projectReducer = (state = initialState, action) => {
   switch (action.type) {
     case SET_NAMESPACE: {
-      mustHave(action.type, "namespace", "string");
+      mustHave(action, "namespace", "string");
       return {
         //new namespace, so reset project state to initial state (until can cache data)
         ...initialState,
@@ -45,8 +45,9 @@ const projectReducer = (state = initialState, action) => {
     case SET_OBJECT: {
       const key = action.key;
       const payload = action.payload;
-      mustHave(action.type, "key", "string");
-      mustHave(action.type, "payload", "object");
+      console.log("typeof action.key?", typeof action.key);
+      mustHave(action, "key", "string");
+      mustHave(action, "payload", "object");
       const objects = state.objects;
       return {
         ...state,
@@ -62,7 +63,7 @@ const projectReducer = (state = initialState, action) => {
     case DELETE_OBJECT: {
       const key = action.key;
       const objects = state.objects;
-      mustHave(action.type, "key", "string");
+      mustHave(action, "key", "string");
       const isDeleted = objects.delete(key);
       if (!isDeleted) {
         throw new Error(
@@ -79,8 +80,8 @@ const projectReducer = (state = initialState, action) => {
       const key = action.key;
       const position = action.position;
       const objects = state.objects;
-      mustHave(action.type, "key", "string");
-      mustHaveOfShape(action.type, "position", { x: "number", y: "number" });
+      mustHave(action, "key", "string");
+      mustHaveOfShape(action, "position", { x: "number", y: "number" });
       const objectToMove = objects.get(key);
       return {
         ...state,
