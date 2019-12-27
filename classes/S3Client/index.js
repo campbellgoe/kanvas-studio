@@ -4,7 +4,7 @@ import S3 from "aws-sdk/clients/s3";
 import envConfig from "../../env.config.json";
 import getDist from "../../utils/getDist";
 
-//polyfill Promise.allSettled
+//polyfill Promise.allSettled + custom data
 const allSettled = promises => {
   let wrappedPromises = promises.map(({ promise, metadata }) =>
     Promise.resolve(promise).then(
@@ -29,75 +29,8 @@ const s3config = {
   region: "eu-west-2",
   apiVersion: "2006-03-01"
 };
-console.log("s3 config", s3config);
 const s3 = new S3(s3config);
-// function getHtml(template) {
-//   return template.join("\n");
-// }
-// function viewBucketFolder(bucketFolderName) {
-//   var bucketFolderPhotosKey = encodeURIComponent(bucketFolderName) + "//";
-//   s3.listObjects({ Prefix: bucketFolderPhotosKey }, function(err, data) {
-//     if (err) {
-//       return console.warn("There was an error viewing your bucketFolder: " + err.message);
-//     }
-//     // 'this' references the AWS.Response instance that represents the response
-//     var href = this.request.httpRequest.endpoint.href;
-//     var bucketUrl = href + bucketName + "/";
 
-//     var photos = data.Contents.map(function(photo) {
-//       var photoKey = photo.Key;
-//       var photoUrl = bucketUrl + encodeURIComponent(photoKey);
-//       return getHtml([
-//         "<span>",
-//         "<div>",
-//         '<img style="width:128px;height:128px;" src="' + photoUrl + '"/>',
-//         "</div>",
-//         "<div>",
-//         "<span onclick=\"deletePhoto('" +
-//           bucketFolderName +
-//           "','" +
-//           photoKey +
-//           "')\">",
-//         "X",
-//         "</span>",
-//         "<span>",
-//         photoKey.replace(bucketFolderPhotosKey, ""),
-//         "</span>",
-//         "</div>",
-//         "</span>"
-//       ]);
-//     });
-//     var message = photos.length
-//       ? "<p>Click on the X to delete the photo</p>"
-//       : "<p>You do not have any photos in this bucketFolder. Please add photos.</p>";
-//     var htmlTemplate = [
-//       "<h2>",
-//       "BucketFolder: " + bucketFolderName,
-//       "</h2>",
-//       message,
-//       "<div>",
-//       getHtml(photos),
-//       "</div>",
-//       '<input id="photoupload" type="file" accept="image/*">',
-//       '<button id="uploadFile" onclick="uploadFile(\'' + bucketFolderName + "')\">",
-//       "Add Photo",
-//       "</button>",
-//       '<button onclick="listBucketFolders()">',
-//       "Back To BucketFolders",
-//       "</button>"
-//     ];
-//     document.getElementById("app").innerHTML = getHtml(htmlTemplate);
-//   });
-// }
-// function deletePhoto(bucketFolderName, photoKey) {
-//   s3.deleteObject({ Key: photoKey }, function(err, data) {
-//     if (err) {
-//       return console.warn("There was an error deleting your photo: ", err.message);
-//     }
-//     console.warn("Successfully deleted photo.");
-//     viewBucketFolder(bucketFolderName);
-//   });
-// }
 function getBucketFolderNamesFromResponse(data) {
   const bucketFolders = data.CommonPrefixes.map(function(commonPrefix) {
     var prefix = commonPrefix.Prefix;
