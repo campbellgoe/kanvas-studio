@@ -2,7 +2,7 @@
 
 //initial mock window so SSR won't kill app when window is accessed during initialisation
 import { window } from "ssr-window";
-
+import { withRedux } from "../redux/withRedux";
 //react and styled-components
 import React, {
   useRef,
@@ -515,4 +515,4 @@ const KanvasStudio = (styled(({ className = "" }) => {
   }
 `: ComponentType<KanvasStudioProps>);
 
-export default KanvasStudio;
+export default withRedux(KanvasStudio);

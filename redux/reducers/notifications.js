@@ -42,6 +42,7 @@ export default function(state = initialState, { type, payload }) {
     case "REMOVE_NOTIFICATION": {
       const { key, removeType = "auto" } = payload;
       const { allowAutoHide } = cards.get(key) || {};
+      console.log("deleting card", key);
       //if auto remove is allowed or this is a manual remove action e.g. click close button, delete the card.
       if (
         (removeType === "auto" && allowAutoHide === true) ||
@@ -57,6 +58,7 @@ export default function(state = initialState, { type, payload }) {
         console.warn("key", key, "not found in toast cards data");
         return state;
       }
+      console.log("keeping notification alive", key);
       return {
         ...state,
         cards: cards.set(key || uuid(), {
