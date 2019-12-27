@@ -43,7 +43,7 @@ const ToastContainer = styled(({ className = "" }) => {
       if (allowAutoHide) {
         if (!cardsToRemove[key]) {
           const timeoutId = setTimeout(() => {
-            if (cards.get(key).allowAutoHide) {
+            if (cards.has(key) && cards.get(key).allowAutoHide) {
               removeNotification(key);
             } else {
               console.warn("card no longer can be removed!");
