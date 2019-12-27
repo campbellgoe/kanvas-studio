@@ -25,3 +25,13 @@ export const DELETE_OBJECT = "DELETE_OBJECT";
 export const MOVE_OBJECT = "MOVE_OBJECT";
 
 export const setNamespace = namespace => ({ type: SET_NAMESPACE, namespace });
+
+export const setObject = (key, payload) => ({ type: SET_OBJECT, key, payload });
+
+export const deleteObject = key => ({ type: DELETE_OBJECT, key });
+
+export const moveObject = (key, position) => ({
+  type: MOVE_OBJECT,
+  key,
+  position
+});
