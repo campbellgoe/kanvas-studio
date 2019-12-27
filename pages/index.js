@@ -12,7 +12,8 @@ import React, {
   type ComponentType
 } from "react";
 import { CREATE_TOAST_CARD } from "../redux/actions.js";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+
 import styled from "styled-components";
 
 //react components
@@ -121,6 +122,7 @@ const Orchestrator = (styled(
   ({ className = "", initialSize, swoopToOriginOnStart = true }) => {
     className += " Orchestrator";
     const dispatch = useDispatch();
+
     const createToastCard = payload =>
       dispatch({ type: CREATE_TOAST_CARD, payload });
     const [pointerMenu, setPointerMenu] = useState(null);
@@ -160,12 +162,12 @@ const Orchestrator = (styled(
       [cellSize, width, height, frame, ox, oy]
     );
     const [filesForUpload, setFilesForUpload] = useState([]);
-    const [namespace, setNamespace] = useLocalStorage(
-      "kanvas-studio-namespace",
-      ""
-    );
+
     //TODO: use URL.revokeObjectURL(objectURL) to unload images
     //TODO: useRedux instead and make it projectData which contains namespace/folder and s3 objects within that folder.
+    const project = useSelector(state => state.project);
+    const [namespace, setNamespace] = useState(project.namespace);
+
     const [liveNamespaces, setLiveNamespaces] = useState([]);
     const [prevSyncTime, setPrevSyncTime] = useState("Never");
     const onSync = () => {
