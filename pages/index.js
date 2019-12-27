@@ -11,6 +11,8 @@ import React, {
   useCallback,
   type ComponentType
 } from "react";
+import { CREATE_TOAST_CARD } from "../redux/actions.js";
+import { useDispatch } from "react-redux";
 import styled from "styled-components";
 
 //react components
@@ -118,6 +120,9 @@ type OrchestratorProps = {
 const Orchestrator = (styled(
   ({ className = "", initialSize, swoopToOriginOnStart = true }) => {
     className += " Orchestrator";
+    const dispatch = useDispatch();
+    const createToastCard = payload =>
+      dispatch({ type: CREATE_TOAST_CARD, payload });
     const [pointerMenu, setPointerMenu] = useState(null);
     //offset from origin (0, 0)
     //relative to top-left of screen, in pixels.
@@ -170,6 +175,10 @@ const Orchestrator = (styled(
       getNearestObjects(namespace, { x: 0, y: 0, range: 99999 }).then(
         objects => {
           console.log("photos:", objects);
+          createToastCard({
+            text: `Found ${objects.length} nearby files.`,
+            type: "info"
+          });
         }
       );
       setPrevSyncTime(Date.now());

@@ -1,8 +1,12 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useRef, useEffect, useState } from "react";
 import styled from "styled-components";
 import { useSelector, useDispatch } from "react-redux";
 import getBoxShadow from "../../utils/getBoxShadow";
 import svgIcons from "../../svg/icons";
+import {
+  DONT_AUTOCLOSE_TOAST_CARD,
+  REMOVE_TOAST_CARD
+} from "../../redux/actions";
 const {
   info: infoSvgIcon,
   warn: warnSvgIcon,
@@ -12,35 +16,63 @@ const {
 
 const ToastContainer = styled(({ className = "" }) => {
   className += " ToastContainer";
-  const notifications = useSelector(state => state.notifications);
+  const { cards } = useSelector(state => state.notifications);
   const dispatch = useDispatch();
   const keepNotificationAlive = useCallback(
     key => {
-      dispatch("DONT_AUTOCLOSE_TOAST_CARD", {
-        key
-      });
+      dispatch({ type: DONT_AUTOCLOSE_TOAST_CARD, payload: { key } });
     },
     [dispatch]
   );
   const removeNotification = useCallback(
     key => {
-      dispatch("REMOVE_TOAST_CARD", {
-        key,
-        removeType: "manual"
+      dispatch({
+        type: REMOVE_TOAST_CARD,
+        payload: { key, removeType: "manual" }
       });
     },
     [dispatch]
   );
+  //cards is a Map of key, values
+  //for all cards with allowHideHide ! false, after 5 seconds, delete them.
+  //if after 5 seconds allowAutoHide is false, don't hide it, else do.
+  const cardsArray = Array.from(cards);
+  const [cardsToRemove, setCardsToRemove] = useState({});
+  useEffect(() => {
+    cardsArray.forEach(([key, { allowAutoHide }]) => {
+      if (allowAutoHide) {
+        if (!cardsToRemove[key]) {
+          const timeoutId = setTimeout(() => {
+            if (cards.get(key).allowAutoHide) {
+              removeNotification(key);
+            } else {
+              console.warn("card no longer can be removed!");
+            }
+          }, 5000);
+          setCardsToRemove(cardsToRemove => ({
+            ...cardsToRemove,
+            [key]: timeoutId
+          }));
+        }
+      } else if (cardsToRemove[key]) {
+        setCardsToRemove(cardsToRemove => {
+          delete cardsToRemove[key];
+          return cardsToRemove;
+        });
+      }
+    });
+  }, [cardsArray]);
   return (
     <div className={className}>
-      {Array.from(notifications, ([key, card], index) => {
-        card = { ...card, ...dataFromType(card.type) };
+      {cardsArray.map(([key, card], index) => {
+        const styleData = dataFromType(card.type);
         return (
           <Toast
             index={index}
             className="ToastCard"
             key={key}
-            {...card}
+            text={card.text}
+            styleData={styleData}
             onClickBody={() => keepNotificationAlive(key)}
             onClose={() => removeNotification(key)}
           />
@@ -107,6 +139,7 @@ const dataFromType = type => {
     }
   }
 };
+//TODO: refactor code so props are passed explicitly
 const Toast = styled(
   ({
     className = "",
@@ -119,7 +152,8 @@ const Toast = styled(
   }) => {
     className += " Toast";
     const toastRef = useRef(null);
-    const [{ cards }] = useStateValue();
+    const { cards } = useSelector(state => state.notifications);
+    //const [{ cards }] = useStateValue();
     //TODO: does this update unecessarily or can I leave it for every render?
     useEffect(() => {
       toastRef.current.style.opacity = (index + 1) / cards.size;
