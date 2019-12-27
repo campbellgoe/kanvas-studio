@@ -14,7 +14,7 @@ import store from "../redux/store";
 //   const reducer = (state, { type, payload }) => {
 //     const cards = state.cards;
 //     switch (type) {
-//       case "CREATE_TOAST_CARD": {
+//       case "CREATE_NOTIFICATION": {
 //         const maxCards = state.maxCards;
 //         const { key } = payload;
 //         if (cards.size >= maxCards) {
@@ -40,7 +40,7 @@ import store from "../redux/store";
 //           cards: cards.set(key || uuid(), { ...payload, createdAt: Date.now() })
 //         };
 //       }
-//       case "REMOVE_TOAST_CARD": {
+//       case "REMOVE_NOTIFICATION": {
 //         const { key, removeType = "auto" } = payload;
 //         const { allowAutoHide = true } = cards.get(key) || {};
 //         //if auto remove is allowed or this is a manual remove action e.g. click close button, delete the card.
@@ -52,7 +52,7 @@ import store from "../redux/store";
 //         }
 //         return { ...state, cards };
 //       }
-//       case "DONT_AUTOCLOSE_TOAST_CARD": {
+//       case "KEEP_NOTIFICATION_ALIVE": {
 //         const { key } = payload;
 //         if (!cards.get(key)) {
 //           console.warn("key", key, "not found in toast cards data");

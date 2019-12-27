@@ -3,10 +3,7 @@ import styled from "styled-components";
 import { useSelector, useDispatch } from "react-redux";
 import getBoxShadow from "../../utils/getBoxShadow";
 import svgIcons from "../../svg/icons";
-import {
-  DONT_AUTOCLOSE_TOAST_CARD,
-  REMOVE_TOAST_CARD
-} from "../../redux/actions";
+import { keepNotificationAlive, removeNotification } from "../../redux/actions";
 const {
   info: infoSvgIcon,
   warn: warnSvgIcon,
@@ -18,21 +15,6 @@ const ToastContainer = styled(({ className = "" }) => {
   className += " ToastContainer";
   const { cards } = useSelector(state => state.notifications);
   const dispatch = useDispatch();
-  const keepNotificationAlive = useCallback(
-    key => {
-      dispatch({ type: DONT_AUTOCLOSE_TOAST_CARD, payload: { key } });
-    },
-    [dispatch]
-  );
-  const removeNotification = useCallback(
-    key => {
-      dispatch({
-        type: REMOVE_TOAST_CARD,
-        payload: { key, removeType: "manual" }
-      });
-    },
-    [dispatch]
-  );
   //cards is a Map of key, values
   //for all cards with allowHideHide ! false, after 5 seconds, delete them.
   //if after 5 seconds allowAutoHide is false, don't hide it, else do.
@@ -44,7 +26,7 @@ const ToastContainer = styled(({ className = "" }) => {
         if (!cardsToRemove[key]) {
           const timeoutId = setTimeout(() => {
             if (cards.has(key) && cards.get(key).allowAutoHide) {
-              removeNotification(key);
+              dispatch(removeNotification(key));
             } else {
               console.warn("card no longer can be removed!");
             }
@@ -73,8 +55,8 @@ const ToastContainer = styled(({ className = "" }) => {
             key={key}
             text={card.text}
             styleData={styleData}
-            onClickBody={() => keepNotificationAlive(key)}
-            onClose={() => removeNotification(key)}
+            onClickBody={() => dispatch(keepNotificationAlive(key))}
+            onClose={() => dispatch(removeNotification(key))}
           />
         );
       })}

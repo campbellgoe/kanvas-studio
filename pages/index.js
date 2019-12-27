@@ -11,7 +11,7 @@ import React, {
   useCallback,
   type ComponentType
 } from "react";
-import { createToastCard, setNamespace } from "../redux/actions.js";
+import { createNotification, setNamespace } from "../redux/actions.js";
 import { useDispatch, useSelector } from "react-redux";
 
 import styled from "styled-components";
@@ -175,7 +175,7 @@ const Orchestrator = (styled(
         objects => {
           console.log("photos:", objects);
           dispatch(
-            createToastCard({
+            createNotification({
               text: `Found ${objects.length} nearby files.`,
               type: "info"
             })

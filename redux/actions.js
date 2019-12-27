@@ -1,11 +1,21 @@
 //notifications
-export const CREATE_TOAST_CARD = "CREATE_TOAST_CARD";
-export const REMOVE_TOAST_CARD = "REMOVE_TOAST_CARD";
-export const DONT_AUTOCLOSE_TOAST_CARD = "DONT_AUTOCLOSE_TOAST_CARD";
+export const CREATE_NOTIFICATION = "CREATE_NOTIFICATION";
+export const REMOVE_NOTIFICATION = "REMOVE_NOTIFICATION";
+export const KEEP_NOTIFICATION_ALIVE = "KEEP_NOTIFICATION_ALIVE";
 
-export const createToastCard = payload => ({
-  type: CREATE_TOAST_CARD,
+export const createNotification = payload => ({
+  type: CREATE_NOTIFICATION,
   payload
+});
+
+export const keepNotificationAlive = key => ({
+  type: KEEP_NOTIFICATION_ALIVE,
+  payload: { key }
+});
+
+export const removeNotification = key => ({
+  type: REMOVE_NOTIFICATION,
+  payload: { key, removeType: "manual" }
 });
 
 //project

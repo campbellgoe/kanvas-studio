@@ -1,6 +1,6 @@
 import {
-  CREATE_TOAST_CARD,
-  REMOVE_TOAST_CARD,
+  CREATE_NOTIFICATION,
+  REMOVE_NOTIFICATION,
   KEEP_NOTIFICATION_ALIVE
 } from "../actions";
 const uuid = require("uuid/v4");
@@ -9,7 +9,7 @@ const initialState = { cards: new Map(), maxCards: 6 };
 export default function(state = initialState, { type, payload }) {
   const cards = state.cards;
   switch (type) {
-    case "CREATE_TOAST_CARD": {
+    case "CREATE_NOTIFICATION": {
       const maxCards = state.maxCards;
       const key = payload.key;
       if (cards.size >= maxCards) {
@@ -39,7 +39,7 @@ export default function(state = initialState, { type, payload }) {
         })
       };
     }
-    case "REMOVE_TOAST_CARD": {
+    case "REMOVE_NOTIFICATION": {
       const { key, removeType = "auto" } = payload;
       const { allowAutoHide } = cards.get(key) || {};
       //if auto remove is allowed or this is a manual remove action e.g. click close button, delete the card.
@@ -51,7 +51,7 @@ export default function(state = initialState, { type, payload }) {
       }
       return { ...state, cards };
     }
-    case "DONT_AUTOCLOSE_TOAST_CARD": {
+    case "KEEP_NOTIFICATION_ALIVE": {
       const { key } = payload;
       if (!cards.get(key)) {
         console.warn("key", key, "not found in toast cards data");
