@@ -136,7 +136,10 @@ function getObjectMetadata({ photoKey, src }) {
 function getFolderKey(namespace) {
   return encodeURIComponent(namespace) + "/";
 }
-async function getMetadata(namespace) {
+async function getMetadata(namespace, bypass = true) {
+  if (bypass) {
+    return [["ahey/infinity.png", { x: 100, y: 200 }]];
+  }
   const folderKey = getFolderKey(namespace);
   try {
     const data = await s3
@@ -154,10 +157,20 @@ function getSrcFromResponse(res) {
   const src = URL.createObjectURL(blob); //possibly `webkitURL` or another vendor prefix for old browsers.
   return src;
 }
+const promiseToGetDummyS3Object = key => {
+  return {
+    Body: JSON.stringify({ hello: "world" }),
+    ContentType: "application/json"
+  };
+};
 //get nearest files within a range
-async function getNearestObjects(namespace, { x, y, range = 1000 }) {
+async function getNearestObjects(
+  namespace,
+  { x, y, range = 1000 },
+  bypass = true
+) {
   //first get metadata for this folder
-  const metadataMap = await getMetadata(namespace);
+  const metadataMap = await getMetadata(namespace, bypass);
   console.log("metadataMap:", metadataMap);
   //metadata is an array of arrays which contains [fileKey, position]
   //for every position that is within range, get that file using the fileKey
@@ -186,7 +199,9 @@ async function getNearestObjects(namespace, { x, y, range = 1000 }) {
   //and want to get the actual object
   const promises = objects.map(({ key, position, distance }) => {
     return {
-      promise: s3.getObject({ Key: key }).promise(),
+      promise: bypass
+        ? promiseToGetDummyS3Object(key)
+        : s3.getObject({ Key: key }).promise(),
       metadata: {
         key,
         position,
