@@ -11,7 +11,13 @@ import React, {
   useCallback,
   type ComponentType
 } from "react";
-import { createNotification, setNamespace } from "../redux/actions.js";
+import {
+  createNotification,
+  setNamespace,
+  setObject,
+  deleteObject,
+  moveObject
+} from "../redux/actions.js";
 import { useDispatch, useSelector } from "react-redux";
 
 import styled from "styled-components";
@@ -165,6 +171,7 @@ const Orchestrator = (styled(
     //TODO: useRedux instead and make it projectData which contains namespace/folder and s3 objects within that folder.
     const project = useSelector(state => state.project);
     const namespace = project.namespace;
+    const objects = project.objects;
     const [liveNamespaces, setLiveNamespaces] = useState([]);
     const [prevSyncTime, setPrevSyncTime] = useState("Never");
     const onSync = () => {
@@ -298,13 +305,24 @@ const Orchestrator = (styled(
                     data: (
                       <ImageInput
                         onChange={files => {
-                          setFilesForUpload(files);
-                          debouncedUploadFile(namespace, files, {
-                            position: JSON.stringify({
-                              x: Math.round(ox),
-                              y: Math.round(oy)
+                          //ignore multiple files for now TODO: support selection of multiple files
+                          const file = files[0];
+                          console.log("file:", file);
+                          //TODO: upload the file to S3 e.g. uncomment this code and disable bypass
+                          // setFilesForUpload(files);
+                          // debouncedUploadFile(namespace, files, {
+                          //   position: JSON.stringify(pointerMenu.position)
+                          // });
+                          //
+                          //attach a local version of the file to the canvas at the mouse position
+                          dispatch(
+                            setObject(file.originalFile.name, {
+                              position: pointerMenu.position,
+                              src: file.blobSrc,
+                              originalFile: file.originalFile
                             })
-                          });
+                          );
+
                           //close menu
                           setPointerMenu(null);
                           //reset pointer (start listening to them again)
@@ -452,20 +470,31 @@ const Orchestrator = (styled(
           syncEnabledInitially={syncEnabledInitially}
           prevSyncTime={prevSyncTime}
         />
-        <ImageInput
-          onChange={files => {
-            setFilesForUpload(files);
-            debouncedUploadFile(namespace, files);
-          }}
-        />
-        {filesForUpload.map(({ blobSrc: src, originalFile }, index) => {
-          return (
-            <div key={src + index}>
-              <p>{originalFile.name}</p>
-              <img src={src} alt="User uploaded" />
-            </div>
-          );
-        })}
+        {Array.from(
+          objects,
+          (
+            [
+              filename,
+              { src, originalFile, position: { x, y } = { x: 0, y: 0 } }
+            ],
+            index
+          ) => {
+            return (
+              <div
+                key={src + index}
+                style={{
+                  position: "absolute",
+                  left: x + ox - width / 2 + "px",
+                  top: y + oy - height / 2 + "px",
+                  pointerEvents: "none"
+                }}
+              >
+                <p>{filename}</p>
+                <img src={src} alt="User uploaded" />
+              </div>
+            );
+          }
+        )}
       </div>
     );
   }
@@ -476,6 +505,13 @@ const Orchestrator = (styled(
     left: 0;
     display: flex;
     flex-direction: column;
+  }
+  .OrchestratorCanvasContainer {
+    position: relative;
+    z-index: 500;
+    canvas {
+      background-color: transparent;
+    }
   }
 `: ComponentType<OrchestratorProps>);
 
