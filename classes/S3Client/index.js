@@ -112,7 +112,7 @@ async function getNearestObjects(
   //WARN: metadata can be out of sync with files in the folder, e.g. a file may be uploaded, but not stored in metadata.json
   //... this function only gets all files specified in metadata.json
   //first get metadata for this folder
-  const metadataMap = await getMetadata(namespace, bypass);
+  const metadataMap = (await getMetadata(namespace, bypass)) || [];
   console.log("metadataMap:", metadataMap);
   //metadataMap is an array of arrays which contains [fileKey, {metadata}] where metadata contains { position: { x, y } }
   //for every position that is within range, get that file using the fileKey

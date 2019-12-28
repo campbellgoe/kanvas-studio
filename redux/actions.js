@@ -21,12 +21,26 @@ export const removeNotification = key => ({
 //project
 export const SET_NAMESPACE = "SET_NAMESPACE";
 export const SET_OBJECT = "SET_OBJECT";
+export const SET_OBJECTS = "SET_OBJECTS";
 export const DELETE_OBJECT = "DELETE_OBJECT";
 export const MOVE_OBJECT = "MOVE_OBJECT";
 
 export const setNamespace = namespace => ({ type: SET_NAMESPACE, namespace });
 
 export const setObject = (key, payload) => ({ type: SET_OBJECT, key, payload });
+
+export const setObjects = (objects, config) => {
+  return {
+    type: SET_OBJECTS,
+    objects: objects.map(object => {
+      if (object instanceof Error) {
+        return console.error(object);
+      }
+      return object;
+    }),
+    config
+  };
+};
 
 export const deleteObject = key => ({ type: DELETE_OBJECT, key });
 

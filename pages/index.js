@@ -15,6 +15,7 @@ import {
   createNotification,
   setNamespace,
   setObject,
+  setObjects,
   deleteObject,
   moveObject
 } from "../redux/actions.js";
@@ -62,7 +63,7 @@ import {
 import envConfig from "../env.config.json";
 
 //WARN: setting this to false makes real requests to S3, which can cost money, for example if stupid infinite loops occur overnight.
-const bypassS3 = false;
+const bypassS3 = true;
 
 if (bypassS3 !== true) {
   console.error("WARN: Not bypassing requests to s3. This may cost money.");
@@ -182,26 +183,14 @@ const Orchestrator = (styled(
     const objects = project.objects;
     const [liveNamespaces, setLiveNamespaces] = useState([]);
     const [prevSyncTime, setPrevSyncTime] = useState("Never");
-    const onSync = () => {
+    const onSync = useCallback(() => {
       //set namespaces listed in the S3 bucket
       throttledListBucketFolders(setLiveNamespaces, bypassS3);
       console.log("namespace:", namespace);
       getNearestObjects(namespace, { x: 0, y: 0, range: 99999 }, bypassS3).then(
         objects => {
           console.log("photos:", objects);
-          objects.forEach(object => {
-            if (object instanceof Error) {
-              return console.error(object);
-            }
-            const { key, src, position } = object;
-            dispatch(
-              setObject(key, {
-                src,
-                position
-              })
-            );
-          });
-
+          dispatch(setObjects(objects, { overwrite: true }));
           dispatch(
             createNotification({
               text: `Found ${objects.length} nearby files.`,
@@ -211,7 +200,7 @@ const Orchestrator = (styled(
         }
       );
       setPrevSyncTime(Date.now());
-    };
+    }, [namespace]);
     useEffect(() => {
       console.log("image sources:::", filesForUpload);
     }, [filesForUpload]);
@@ -485,6 +474,7 @@ const Orchestrator = (styled(
             dispatch(setNamespace(namespace));
           }}
         />
+        <button onClick={onSync}>Synchronise</button>
         {/*<ProjectController />*/}
         <button
           onClick={() => {

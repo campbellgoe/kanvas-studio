@@ -1,11 +1,23 @@
 import {
   SET_NAMESPACE,
   SET_OBJECT,
+  SET_OBJECTS,
   DELETE_OBJECT,
   MOVE_OBJECT
 } from "../actions.js";
+const getLocalNamespace = () => {
+  if (typeof window == "object") {
+    return window.localStorage.getItem("kanvas-studio_project.namespace");
+  }
+  return "";
+};
+const setLocalNamespace = namespace => {
+  if (typeof window == "object") {
+    window.localStorage.setItem("kanvas-studio_project.namespace", namespace);
+  }
+};
 const initialState = {
-  namespace: "ahey",
+  namespace: getLocalNamespace(),
   updatedAt: "Never",
   objects: new Map([])
 };
@@ -36,10 +48,18 @@ const projectReducer = (state = initialState, action) => {
   switch (action.type) {
     case SET_NAMESPACE: {
       mustHave(action, "namespace", "string");
+      const namespace = action.namespace;
+      if (namespace === state.namespace) {
+        return state;
+      }
+      //new namespace, clear objects data.
+      const objects = state.objects;
+      objects.clear();
+      setLocalNamespace(namespace);
       return {
-        //new namespace, so reset project state to initial state (until can cache data)
-        ...initialState,
-        namespace: action.namespace
+        ...state,
+        namespace,
+        objects
       };
     }
     case SET_OBJECT: {
@@ -56,6 +76,26 @@ const projectReducer = (state = initialState, action) => {
           //for the specific object
           updatedAt: Date.now()
         }),
+        //for the project data in general
+        updatedAt: Date.now()
+      };
+    }
+    //NOTE: should this overwrite objects, or merge objects in ?
+    case SET_OBJECTS: {
+      mustHave(action, "objects", "object");
+      const config = action.config;
+      const overwrite = config.overwrite;
+      const objects = state.objects;
+      if (overwrite) {
+        //overwrite the entire objects already in state with these objects.
+        objects.clear();
+      }
+      action.objects.forEach(({ key, ...payload }) => {
+        objects.set(key, { ...payload, updatedAt: Date.now() });
+      });
+      return {
+        ...state,
+        objects,
         //for the project data in general
         updatedAt: Date.now()
       };
