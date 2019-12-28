@@ -203,10 +203,11 @@ async function getNearestObjects(
   // });
 }
 
-function uploadFile(bucketFolderName, files, bypass = true) {
+function uploadFile(bucketFolderName, files, metadata, bypass = true) {
   if (bypass)
     return console.warn(
-      "bypassing upload file to S3 (take care of unecessary costs)"
+      "bypassing upload file to S3 (take care of unecessary costs)",
+      files
     );
   if (!files.length) {
     return console.warn("Please choose a file to upload first.");
@@ -220,6 +221,8 @@ function uploadFile(bucketFolderName, files, bypass = true) {
 
   var photoKey = bucketFolderPhotosKey + file.name;
   console.log("file to send:", file);
+  const Metadata = metadata;
+  console.log("Metadata:", Metadata);
   // Use S3 ManagedUpload class as it supports multipart uploads
   const s3 = new S3({
     ...s3config,
@@ -228,7 +231,8 @@ function uploadFile(bucketFolderName, files, bypass = true) {
         Bucket: bucketName,
         Key: photoKey,
         Body: file,
-        ACL: "public-read"
+        ACL: "public-read",
+        Metadata
       }
     }
   });
@@ -238,7 +242,8 @@ function uploadFile(bucketFolderName, files, bypass = true) {
         Bucket: bucketName,
         Key: photoKey,
         Body: file,
-        ACL: "public-read"
+        ACL: "public-read",
+        Metadata
       }
     },
     (err, data) => {

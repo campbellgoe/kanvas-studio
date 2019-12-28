@@ -174,7 +174,6 @@ const Orchestrator = (styled(
       },
       [cellSize, width, height, frame, ox, oy]
     );
-    const [filesForUpload, setFilesForUpload] = useState([]);
 
     //TODO: use URL.revokeObjectURL(objectURL) to unload images
     //TODO: useRedux instead and make it projectData which contains namespace/folder and s3 objects within that folder.
@@ -201,9 +200,6 @@ const Orchestrator = (styled(
       );
       setPrevSyncTime(Date.now());
     }, [namespace]);
-    useEffect(() => {
-      console.log("image sources:::", filesForUpload);
-    }, [filesForUpload]);
 
     const elCanvasContainer = useRef(null);
     const [
@@ -317,18 +313,22 @@ const Orchestrator = (styled(
                         onChange={files => {
                           //ignore multiple files for now TODO: support selection of multiple files
                           const file = files[0];
-                          console.log("file:", file);
-                          //upload the file to S3
-                          setFilesForUpload(files);
-                          uploadFile(namespace, [file.originalFile], bypassS3);
-
-                          //attach a local version of the file to the canvas at the mouse position
                           const key = file.originalFile.name;
+                          const position = pointerMenu.position;
                           const payload = {
-                            position: pointerMenu.position,
+                            position,
                             src: file.blobSrc
                           };
+                          console.log("file:", file);
+                          //upload the file to S3
+                          uploadFile(
+                            namespace,
+                            [file.originalFile],
+                            { position: JSON.stringify(position) },
+                            bypassS3
+                          );
                           dispatch(setObject(key, payload));
+
                           //upload new metadata.json to /namespace
                           const myMetadataFile = new File(
                             [
@@ -345,7 +345,12 @@ const Orchestrator = (styled(
                             }
                           );
 
-                          uploadFile(namespace, [myMetadataFile], bypassS3);
+                          uploadFile(
+                            namespace,
+                            [myMetadataFile],
+                            null,
+                            bypassS3
+                          );
                           //close menu
                           setPointerMenu(null);
                           //reset pointer (start listening to them again)

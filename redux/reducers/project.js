@@ -90,8 +90,16 @@ const projectReducer = (state = initialState, action) => {
         //overwrite the entire objects already in state with these objects.
         objects.clear();
       }
-      action.objects.forEach(({ key, ...payload }) => {
-        objects.set(key, { ...payload, updatedAt: Date.now() });
+      action.objects.forEach(object => {
+        if (!object || object instanceof Error) {
+          //TODO: handle error at source, instead of pass it here to handle.
+          console.error(object || "No object... must be buggy. fix this.");
+          console.log("skipping");
+        } else {
+          console.log("object:", object);
+          const { key, ...payload } = object;
+          objects.set(key, { ...payload, updatedAt: Date.now() });
+        }
       });
       return {
         ...state,
