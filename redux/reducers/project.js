@@ -7,7 +7,7 @@ import {
 const initialState = {
   namespace: "ahey",
   updatedAt: "Never",
-  objects: new Map([["infinity.png", { x: 100, y: 200 }]])
+  objects: new Map([])
 };
 const mustHave = (action, property, mustBeOfType, suffix = "") => {
   if (typeof action[property] != mustBeOfType) {

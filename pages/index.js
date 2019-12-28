@@ -60,6 +60,12 @@ import {
 //JSON version of .env (built with yarn run build:env)
 import envConfig from "../env.config.json";
 
+const bypassS3 = true;
+
+const selectFrom = (object, selectors) => {
+  return selectors.reduce((acc, val) => ({ ...acc, [val]: object[val] }), {});
+};
+
 //in case a user does many actions in a short time, the minimum is this.
 const minimumSecondsPerSync = envConfig.S3_SYNC_THROTTLER_SECONDS || 30;
 //don't update too often
@@ -80,9 +86,9 @@ const debouncedCreateBucketFolder = debounce(
 );
 
 //only upload the last file(s) upload request if a burst of requests to upload files are made.
-const debouncedUploadFile = debounce(
+const throttledUploadFile = throttle(
   1000 * minimumSecondsPerSync,
-  true,
+  false,
   uploadFile
 );
 
@@ -176,9 +182,9 @@ const Orchestrator = (styled(
     const [prevSyncTime, setPrevSyncTime] = useState("Never");
     const onSync = () => {
       //set namespaces listed in the S3 bucket
-      throttledListBucketFolders(setLiveNamespaces);
+      throttledListBucketFolders(setLiveNamespaces, bypassS3);
       console.log("namespace:", namespace);
-      getNearestObjects(namespace, { x: 0, y: 0, range: 99999 }).then(
+      getNearestObjects(namespace, { x: 0, y: 0, range: 99999 }, bypassS3).then(
         objects => {
           console.log("photos:", objects);
           dispatch(
@@ -308,21 +314,43 @@ const Orchestrator = (styled(
                           //ignore multiple files for now TODO: support selection of multiple files
                           const file = files[0];
                           console.log("file:", file);
-                          //TODO: upload the file to S3 e.g. uncomment this code and disable bypass
-                          // setFilesForUpload(files);
-                          // debouncedUploadFile(namespace, files, {
-                          //   position: JSON.stringify(pointerMenu.position)
-                          // });
-                          //
-                          //attach a local version of the file to the canvas at the mouse position
-                          dispatch(
-                            setObject(file.originalFile.name, {
-                              position: pointerMenu.position,
-                              src: file.blobSrc,
-                              originalFile: file.originalFile
-                            })
+                          //upload the file to S3
+                          setFilesForUpload(files);
+                          throttledUploadFile(
+                            namespace,
+                            [file.originalFile],
+                            bypassS3
                           );
 
+                          //attach a local version of the file to the canvas at the mouse position
+                          const key = file.originalFile.name;
+                          const payload = {
+                            position: pointerMenu.position,
+                            src: file.blobSrc,
+                            originalFile: file.originalFile
+                          };
+                          dispatch(setObject(key, payload));
+                          //upload new metadata.json to /namespace
+                          const myMetadataFile = new File(
+                            [
+                              JSON.stringify(
+                                Array.from(objects, ([key, object]) => [
+                                  key,
+                                  selectFrom(object, ["position"])
+                                ])
+                              )
+                            ],
+                            "metadata.json",
+                            {
+                              type: "application/json"
+                            }
+                          );
+
+                          throttledUploadFile(
+                            namespace,
+                            [myMetadataFile],
+                            bypassS3
+                          );
                           //close menu
                           setPointerMenu(null);
                           //reset pointer (start listening to them again)
@@ -454,11 +482,15 @@ const Orchestrator = (styled(
         {/*<ProjectController />*/}
         <button
           onClick={() => {
-            debouncedCreateBucketFolder(namespace, data => {
-              console.log("created bucketFolder, data:", data);
-              onSync();
-              //const bucketFolders = getBucketFolderNamesFromResponse(data);
-            });
+            debouncedCreateBucketFolder(
+              namespace,
+              data => {
+                console.log("created bucketFolder, data:", data);
+                onSync();
+                //const bucketFolders = getBucketFolderNamesFromResponse(data);
+              },
+              bypassS3
+            );
           }}
         >
           Create namespace

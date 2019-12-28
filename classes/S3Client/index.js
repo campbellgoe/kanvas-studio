@@ -39,7 +39,14 @@ function getBucketFolderNamesFromResponse(data) {
   });
   return bucketFolders;
 }
-function listBucketFolders(cb) {
+const dummyBucketFolders = [
+  "ahey",
+  "dummy namespace 0",
+  "dummy namespace 1",
+  "dummy namespace 2"
+];
+function listBucketFolders(cb, bypass = true) {
+  if (bypass) return cb(dummyBucketFolders);
   s3.listObjects({ Delimiter: "/" }, function(err, data) {
     if (err) {
       return console.warn(
@@ -71,7 +78,7 @@ function getFolderKey(namespace) {
 }
 async function getMetadata(namespace, bypass = true) {
   if (bypass) {
-    return [["ahey/infinity.png", { x: 100, y: 200 }]];
+    return [["dummyfile.txt", { position: { x: 0, y: 0 } }]];
   }
   const folderKey = getFolderKey(namespace);
   try {
@@ -193,14 +200,18 @@ async function getNearestObjects(
   // });
 }
 
-function uploadFile(bucketFolderName, files, metadata = {}) {
+function uploadFile(bucketFolderName, files, bypass = true) {
+  if (bypass)
+    return console.warn(
+      "bypassing upload file to S3 (take care of unecessary costs)"
+    );
   if (!files.length) {
     return console.warn("Please choose a file to upload first.");
   }
   if (files.length > 1) {
     console.warn("Can only upload 1 image at a time.");
   }
-  var file = files[0].originalFile;
+  var file = files[0];
 
   var bucketFolderPhotosKey = encodeURIComponent(bucketFolderName) + "/";
 
@@ -214,8 +225,7 @@ function uploadFile(bucketFolderName, files, metadata = {}) {
         Bucket: bucketName,
         Key: photoKey,
         Body: file,
-        ACL: "public-read",
-        Metadata: metadata
+        ACL: "public-read"
       }
     }
   });
@@ -225,8 +235,7 @@ function uploadFile(bucketFolderName, files, metadata = {}) {
         Bucket: bucketName,
         Key: photoKey,
         Body: file,
-        ACL: "public-read",
-        Metadata: metadata
+        ACL: "public-read"
       }
     },
     (err, data) => {
@@ -239,7 +248,11 @@ function uploadFile(bucketFolderName, files, metadata = {}) {
   );
 }
 
-function createBucketFolder(bucketFolderName, cb) {
+function createBucketFolder(bucketFolderName, cb, bypass = true) {
+  if (bypass) {
+    console.warn("bypassing createBucketFolder for", bucketFolderName);
+    return cb(null);
+  }
   bucketFolderName = bucketFolderName.trim();
   if (!bucketFolderName) {
     return console.warn(
