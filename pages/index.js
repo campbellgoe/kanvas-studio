@@ -60,7 +60,11 @@ import {
 //JSON version of .env (built with yarn run build:env)
 import envConfig from "../env.config.json";
 
+//WARN: setting this to false makes real requests to S3, which can cost money, for example if stupid infinite loops occur overnight.
 const bypassS3 = true;
+if (bypassS3 !== true) {
+  console.error("WARN: Not bypassing requests to s3. This may cost money.");
+}
 
 const selectFrom = (object, selectors) => {
   return selectors.reduce((acc, val) => ({ ...acc, [val]: object[val] }), {});
