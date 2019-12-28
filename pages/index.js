@@ -303,12 +303,57 @@ const Orchestrator = (styled(
       },
       [objects]
     );
-    const CanvasFiles = (
+    const ObjectMenu = ({ x, y, filename }) => {
+      return (
+        <div
+          style={{
+            transform: `translate(${x}px, ${y}px)`
+            //pointerEvents: "none"
+          }}
+        >
+          <button
+            onClick={() => {
+              dispatch(deleteObject(filename));
+              //also need to delete is on s3 (this could be done in a redux saga, or here)
+              //it makes more sense to do it in redux-saga so it is done for every deleteObject action
+              //automatically, without needing to manually do it every time the action is dispatched.
+              deleteFile(namespace, filename)
+                .then(d => {
+                  console.warn("file", filename, "deleted from S3.", d);
+                })
+                .catch(err => {
+                  console.error(err);
+                });
+              //also overwrite metadata.json so it doesn't have this file in it
+              uploadMetadataFile(objects);
+            }}
+          >
+            Delete
+          </button>
+          <p className="image-filename">{filename}</p>
+        </div>
+      );
+    };
+    const ObjectImage = ({ x, y, src }) => {
+      return (
+        <img
+          src={src}
+          alt="User uploaded"
+          loading="lazy"
+          style={{
+            transform: `translate(${x}px, ${y}px)`
+            //pointerEvents: "none"
+          }}
+        />
+      );
+    };
+    const makePositioner = (getJsx, zIndex = "") => (
       <div
         className="objects-positioner"
         style={{
           transform: `translate(${ox}px, ${oy}px)`,
-          willChange: "transform"
+          willChange: "transform",
+          zIndex
         }}
       >
         {Array.from(
@@ -321,37 +366,8 @@ const Orchestrator = (styled(
             index
           ) => {
             return (
-              <div
-                key={src + index}
-                className="object-container"
-                style={{
-                  transform: `translate(${x}px, ${y}px)`
-                  //pointerEvents: "none"
-                }}
-              >
-                <div>
-                  <button
-                    onClick={() => {
-                      dispatch(deleteObject(filename));
-                      //also need to delete is on s3 (this could be done in a redux saga, or here)
-                      //it makes more sense to do it in redux-saga so it is done for every deleteObject action
-                      //automatically, without needing to manually do it every time the action is dispatched.
-                      deleteFile(namespace, filename)
-                        .then(d => {
-                          console.warn("file", filename, "deleted from S3.", d);
-                        })
-                        .catch(err => {
-                          console.error(err);
-                        });
-                      //also overwrite metadata.json so it doesn't have this file in it
-                      uploadMetadataFile(objects);
-                    }}
-                  >
-                    Delete
-                  </button>
-                  <p className="image-filename">{filename}</p>
-                </div>
-                <img src={src} alt="User uploaded" loading="lazy" />
+              <div key={src + index} className="object-container">
+                {getJsx({ filename, src, originalFile, x, y })}
               </div>
             );
           }
@@ -380,57 +396,21 @@ const Orchestrator = (styled(
           )}
         </div>
         <div className="OrchestratorCanvasContainer" ref={elCanvasContainer}>
-          {pointerMenu && (
-            <PointerMenu
-              className="OrchestratorPointerMenu"
-              position={pointerMenu.position}
-            >
-              <ConfigRenderer
-                config={[
-                  {
-                    type: "jsx",
-                    data: (
-                      <ImageInput
-                        onChange={files => {
-                          //ignore multiple files for now TODO: support selection of multiple files
-                          const file = files[0];
-                          const key = file.originalFile.name;
-                          const position = pointerMenu.offsetPosition;
-                          const payload = {
-                            position,
-                            src: file.blobSrc
-                          };
-                          console.log("file:", file);
-                          //upload the file to S3
-                          uploadFile(
-                            namespace,
-                            [file.originalFile],
-                            { position: JSON.stringify(position) },
-                            bypassS3
-                          );
-                          dispatch(setObject(key, payload));
-
-                          uploadMetadataFile(objects);
-                          //close menu
-                          setPointerMenu(null);
-                          //reset pointer (start listening to them again)
-                          setPointer(null);
-                          setListenToPointer(true);
-                        }}
-                      />
-                    )
-                  }
-                ]}
-              />
-            </PointerMenu>
-          )}
           <Canvas
             className="OrchestratorCanvas"
             width={width}
             height={height}
             hideCursor={listeningToPointer}
-            onMouseOut={() => setListenToPointer(false)}
-            onMouseOver={() => setListenToPointer(true)}
+            onMouseOut={() => {
+              if (pointer && !pointer.isDown && listeningToPointer) {
+                setListenToPointer(false);
+              }
+            }}
+            onMouseOver={() => {
+              if (!listeningToPointer) {
+                setListenToPointer(true);
+              }
+            }}
             resizeEventDrawFn={(ctx, draw) => {
               console.log("after resize draw");
               setCellSize(Math.max(width, height) / gridCellSizeDivisor);
@@ -472,8 +452,53 @@ const Orchestrator = (styled(
             }}
             frame={frame}
           />
-          {CanvasFiles}
+          {makePositioner(ObjectMenu, "600")}
+          {makePositioner(ObjectImage, "400")}
         </div>
+        {pointerMenu && (
+          <PointerMenu
+            className="OrchestratorPointerMenu"
+            position={pointerMenu.position}
+          >
+            <ConfigRenderer
+              config={[
+                {
+                  type: "jsx",
+                  data: (
+                    <ImageInput
+                      onChange={files => {
+                        //ignore multiple files for now TODO: support selection of multiple files
+                        const file = files[0];
+                        const key = file.originalFile.name;
+                        const position = pointerMenu.offsetPosition;
+                        const payload = {
+                          position,
+                          src: file.blobSrc
+                        };
+                        console.log("file:", file);
+                        //upload the file to S3
+                        uploadFile(
+                          namespace,
+                          [file.originalFile],
+                          { position: JSON.stringify(position) },
+                          bypassS3
+                        );
+                        dispatch(setObject(key, payload));
+
+                        uploadMetadataFile(objects);
+                        //close menu
+                        setPointerMenu(null);
+                        //reset pointer (start listening to them again)
+                        setPointer(null);
+                        setListenToPointer(true);
+                      }}
+                    />
+                  )
+                }
+              ]}
+            />
+          </PointerMenu>
+        )}
         <ConfigRenderer
           config={[
             {
@@ -585,22 +610,22 @@ const Orchestrator = (styled(
     top: 0px;
   }
   .object-container {
-    position: absolute;
+    height: 0;
     div {
-      z-index: 600;
       position: relative;
+      display: inline-block;
     }
     img {
-      z-index: 300;
       position: relative;
     }
   }
   .OrchestratorCanvasContainer {
     position: relative;
-    z-index: 500;
     overflow: hidden;
     canvas {
       background-color: transparent;
+      z-index: 500;
+      position: relative;
     }
   }
 `: ComponentType<OrchestratorProps>);
