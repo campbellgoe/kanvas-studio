@@ -263,7 +263,9 @@ const Orchestrator = (styled(
             const onUp = () => {
               //setPointerMenu({ x: pointer.x, y: pointer.y });
               if (pointer.downControlType === "right") {
-                setPointerMenu({ position: { x: pointer.x, y: pointer.y } });
+                const position = { x: pointer.x, y: pointer.y };
+                const offsetPosition = { x: pointer.x - ox, y: pointer.y - oy };
+                setPointerMenu({ position, offsetPosition });
               }
             };
             onUp();
@@ -300,6 +302,61 @@ const Orchestrator = (styled(
         uploadFile(namespace, [myMetadataFile], null, bypassS3);
       },
       [objects]
+    );
+    const CanvasFiles = (
+      <div
+        className="objects-positioner"
+        style={{
+          transform: `translate(${ox}px, ${oy}px)`,
+          willChange: "transform"
+        }}
+      >
+        {Array.from(
+          objects,
+          (
+            [
+              filename,
+              { src, originalFile, position: { x, y } = { x: 0, y: 0 } }
+            ],
+            index
+          ) => {
+            return (
+              <div
+                key={src + index}
+                className="object-container"
+                style={{
+                  transform: `translate(${x}px, ${y}px)`
+                  //pointerEvents: "none"
+                }}
+              >
+                <div>
+                  <button
+                    onClick={() => {
+                      dispatch(deleteObject(filename));
+                      //also need to delete is on s3 (this could be done in a redux saga, or here)
+                      //it makes more sense to do it in redux-saga so it is done for every deleteObject action
+                      //automatically, without needing to manually do it every time the action is dispatched.
+                      deleteFile(namespace, filename)
+                        .then(d => {
+                          console.warn("file", filename, "deleted from S3.", d);
+                        })
+                        .catch(err => {
+                          console.error(err);
+                        });
+                      //also overwrite metadata.json so it doesn't have this file in it
+                      uploadMetadataFile(objects);
+                    }}
+                  >
+                    Delete
+                  </button>
+                  <p className="image-filename">{filename}</p>
+                </div>
+                <img src={src} alt="User uploaded" loading="lazy" />
+              </div>
+            );
+          }
+        )}
+      </div>
     );
     return (
       <div className={className}>
@@ -338,7 +395,7 @@ const Orchestrator = (styled(
                           //ignore multiple files for now TODO: support selection of multiple files
                           const file = files[0];
                           const key = file.originalFile.name;
-                          const position = pointerMenu.position;
+                          const position = pointerMenu.offsetPosition;
                           const payload = {
                             position,
                             src: file.blobSrc
@@ -415,6 +472,7 @@ const Orchestrator = (styled(
             }}
             frame={frame}
           />
+          {CanvasFiles}
         </div>
         <ConfigRenderer
           config={[
@@ -506,53 +564,6 @@ const Orchestrator = (styled(
           syncEnabledInitially={syncEnabledInitially}
           prevSyncTime={prevSyncTime}
         />
-        {Array.from(
-          objects,
-          (
-            [
-              filename,
-              { src, originalFile, position: { x, y } = { x: 0, y: 0 } }
-            ],
-            index
-          ) => {
-            return (
-              <div
-                key={src + index}
-                style={{
-                  position: "absolute",
-                  left: x + ox - width / 2 + "px",
-                  top: y + oy - height / 2 + "px",
-                  zIndex: 600
-                  //pointerEvents: "none"
-                }}
-              >
-                <div>
-                  <button
-                    onClick={() => {
-                      dispatch(deleteObject(filename));
-                      //also need to delete is on s3 (this could be done in a redux saga, or here)
-                      //it makes more sense to do it in redux-saga so it is done for every deleteObject action
-                      //automatically, without needing to manually do it every time the action is dispatched.
-                      deleteFile(namespace, filename)
-                        .then(d => {
-                          console.warn("file", filename, "deleted from S3.", d);
-                        })
-                        .catch(err => {
-                          console.error(err);
-                        });
-                      //also overwrite metadata.json so it doesn't have this file in it
-                      uploadMetadataFile(objects);
-                    }}
-                  >
-                    Delete
-                  </button>
-                  <p className="image-filename">{filename}</p>
-                </div>
-                <img src={src} alt="User uploaded" loading="lazy" />
-              </div>
-            );
-          }
-        )}
       </div>
     );
   }
@@ -568,9 +579,26 @@ const Orchestrator = (styled(
     display: inline-block;
     margin-left: 16px;
   }
+  .objects-positioner {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+  }
+  .object-container {
+    position: absolute;
+    div {
+      z-index: 600;
+      position: relative;
+    }
+    img {
+      z-index: 300;
+      position: relative;
+    }
+  }
   .OrchestratorCanvasContainer {
     position: relative;
     z-index: 500;
+    overflow: hidden;
     canvas {
       background-color: transparent;
     }
