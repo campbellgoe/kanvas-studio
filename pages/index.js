@@ -56,14 +56,15 @@ import {
   //aka create new namespace
   createBucketFolder,
   //upload file to a given namespace
-  uploadFile
+  uploadFile,
+  deleteObject as deleteFile
 } from "../classes/S3Client";
 
 //JSON version of .env (built with yarn run build:env)
 import envConfig from "../env.config.json";
 
 //WARN: setting this to false makes real requests to S3, which can cost money, for example if stupid infinite loops occur overnight.
-const bypassS3 = true;
+const bypassS3 = false;
 
 if (bypassS3 !== true) {
   console.error("WARN: Not bypassing requests to s3. This may cost money.");
@@ -115,7 +116,8 @@ const PointerMenu = ({
       style={{
         position: "absolute",
         left: x + "px",
-        top: y + "px"
+        top: y + "px",
+        zIndex: 900
       }}
     >
       {children}
@@ -277,6 +279,28 @@ const Orchestrator = (styled(
         setFrame(frame + 1);
       }, msPerFrame);
     }, [frame]);
+    const uploadMetadataFile = useCallback(
+      objects => {
+        //upload new metadata.json to /namespace
+        const myMetadataFile = new File(
+          [
+            JSON.stringify(
+              Array.from(objects, ([key, object]) => [
+                key,
+                selectFrom(object, ["position"])
+              ])
+            )
+          ],
+          "metadata.json",
+          {
+            type: "application/json"
+          }
+        );
+
+        uploadFile(namespace, [myMetadataFile], null, bypassS3);
+      },
+      [objects]
+    );
     return (
       <div className={className}>
         <div className="hud">
@@ -329,28 +353,7 @@ const Orchestrator = (styled(
                           );
                           dispatch(setObject(key, payload));
 
-                          //upload new metadata.json to /namespace
-                          const myMetadataFile = new File(
-                            [
-                              JSON.stringify(
-                                Array.from(objects, ([key, object]) => [
-                                  key,
-                                  selectFrom(object, ["position"])
-                                ])
-                              )
-                            ],
-                            "metadata.json",
-                            {
-                              type: "application/json"
-                            }
-                          );
-
-                          uploadFile(
-                            namespace,
-                            [myMetadataFile],
-                            null,
-                            bypassS3
-                          );
+                          uploadMetadataFile(objects);
                           //close menu
                           setPointerMenu(null);
                           //reset pointer (start listening to them again)
@@ -519,10 +522,32 @@ const Orchestrator = (styled(
                   position: "absolute",
                   left: x + ox - width / 2 + "px",
                   top: y + oy - height / 2 + "px",
-                  pointerEvents: "none"
+                  zIndex: 600
+                  //pointerEvents: "none"
                 }}
               >
-                <p>{filename}</p>
+                <div>
+                  <button
+                    onClick={() => {
+                      dispatch(deleteObject(filename));
+                      //also need to delete is on s3 (this could be done in a redux saga, or here)
+                      //it makes more sense to do it in redux-saga so it is done for every deleteObject action
+                      //automatically, without needing to manually do it every time the action is dispatched.
+                      deleteFile(namespace, filename)
+                        .then(d => {
+                          console.warn("file", filename, "deleted from S3.", d);
+                        })
+                        .catch(err => {
+                          console.error(err);
+                        });
+                      //also overwrite metadata.json so it doesn't have this file in it
+                      uploadMetadataFile(objects);
+                    }}
+                  >
+                    Delete
+                  </button>
+                  <p className="image-filename">{filename}</p>
+                </div>
                 <img src={src} alt="User uploaded" loading="lazy" />
               </div>
             );
@@ -538,6 +563,10 @@ const Orchestrator = (styled(
     left: 0;
     display: flex;
     flex-direction: column;
+  }
+  .image-filename {
+    display: inline-block;
+    margin-left: 16px;
   }
   .OrchestratorCanvasContainer {
     position: relative;

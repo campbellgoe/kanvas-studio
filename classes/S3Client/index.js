@@ -292,4 +292,9 @@ function createBucketFolder(bucketFolderName, cb, bypass = true) {
   });
 }
 
+export const deleteObject = (namespace, key) => {
+  const Key = getFolderKey(namespace) + key;
+  return s3.deleteObject({ Key }).promise();
+};
+
 export { listBucketFolders, getNearestObjects, createBucketFolder, uploadFile };
