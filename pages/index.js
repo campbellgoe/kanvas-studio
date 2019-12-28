@@ -62,7 +62,8 @@ import {
 import envConfig from "../env.config.json";
 
 //WARN: setting this to false makes real requests to S3, which can cost money, for example if stupid infinite loops occur overnight.
-const bypassS3 = true;
+const bypassS3 = false;
+
 if (bypassS3 !== true) {
   console.error("WARN: Not bypassing requests to s3. This may cost money.");
 }
@@ -188,6 +189,19 @@ const Orchestrator = (styled(
       getNearestObjects(namespace, { x: 0, y: 0, range: 99999 }, bypassS3).then(
         objects => {
           console.log("photos:", objects);
+          objects.forEach(object => {
+            if (object instanceof Error) {
+              return console.error(object);
+            }
+            const { key, src, position } = object;
+            dispatch(
+              setObject(key, {
+                src,
+                position
+              })
+            );
+          });
+
           dispatch(
             createNotification({
               text: `Found ${objects.length} nearby files.`,
@@ -317,18 +331,13 @@ const Orchestrator = (styled(
                           console.log("file:", file);
                           //upload the file to S3
                           setFilesForUpload(files);
-                          throttledUploadFile(
-                            namespace,
-                            [file.originalFile],
-                            bypassS3
-                          );
+                          uploadFile(namespace, [file.originalFile], bypassS3);
 
                           //attach a local version of the file to the canvas at the mouse position
                           const key = file.originalFile.name;
                           const payload = {
                             position: pointerMenu.position,
-                            src: file.blobSrc,
-                            originalFile: file.originalFile
+                            src: file.blobSrc
                           };
                           dispatch(setObject(key, payload));
                           //upload new metadata.json to /namespace
@@ -347,11 +356,7 @@ const Orchestrator = (styled(
                             }
                           );
 
-                          throttledUploadFile(
-                            namespace,
-                            [myMetadataFile],
-                            bypassS3
-                          );
+                          uploadFile(namespace, [myMetadataFile], bypassS3);
                           //close menu
                           setPointerMenu(null);
                           //reset pointer (start listening to them again)

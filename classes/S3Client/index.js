@@ -106,17 +106,19 @@ const promiseToGetDummyS3Object = key => {
 //get nearest files within a range
 async function getNearestObjects(
   namespace,
-  { x, y, range = 1000 },
+  { x, y, range = Infinity },
   bypass = true
 ) {
+  //WARN: metadata can be out of sync with files in the folder, e.g. a file may be uploaded, but not stored in metadata.json
+  //... this function only gets all files specified in metadata.json
   //first get metadata for this folder
   const metadataMap = await getMetadata(namespace, bypass);
   console.log("metadataMap:", metadataMap);
-  //metadata is an array of arrays which contains [fileKey, position]
+  //metadataMap is an array of arrays which contains [fileKey, {metadata}] where metadata contains { position: { x, y } }
   //for every position that is within range, get that file using the fileKey
   //sort the metadata so that the closest are loaded first
   const objects = metadataMap
-    .map(([key, position]) => {
+    .map(([key, { position }]) => {
       //WARN: this mapping function assumes the metadata for this key is only the x, y position.
       //get dist from the given x, y which come from the canvas offset (aka camera position).
       const distance = getDist(position, { x, y });
@@ -141,7 +143,7 @@ async function getNearestObjects(
     return {
       promise: bypass
         ? promiseToGetDummyS3Object(key)
-        : s3.getObject({ Key: key }).promise(),
+        : s3.getObject({ Key: namespace + "/" + key }).promise(),
       metadata: {
         key,
         position,
@@ -157,8 +159,9 @@ async function getNearestObjects(
     }
     const src = getSrcFromResponse(value);
     return {
+      key: metadata.key,
       src,
-      metadata
+      position: metadata.position
     };
   });
 
