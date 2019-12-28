@@ -43,6 +43,7 @@ import { throttle, debounce } from "throttle-debounce";
 import { safelyCallAndSetState } from "../utils";
 import snap, { snapAll } from "../utils/snap";
 import getDist from "../utils/getDist";
+import selectFrom from "../utils/selectFrom";
 
 //classes
 //TODO: need to refactor S3Client
@@ -65,10 +66,6 @@ const bypassS3 = true;
 if (bypassS3 !== true) {
   console.error("WARN: Not bypassing requests to s3. This may cost money.");
 }
-
-const selectFrom = (object, selectors) => {
-  return selectors.reduce((acc, val) => ({ ...acc, [val]: object[val] }), {});
-};
 
 //in case a user does many actions in a short time, the minimum is this.
 const minimumSecondsPerSync = envConfig.S3_SYNC_THROTTLER_SECONDS || 30;
