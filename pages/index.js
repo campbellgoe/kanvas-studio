@@ -528,7 +528,7 @@ const Orchestrator = (styled(
                 }}
               >
                 <p>{filename}</p>
-                <img src={src} alt="User uploaded" />
+                <img src={src} alt="User uploaded" loading="lazy" />
               </div>
             );
           }
