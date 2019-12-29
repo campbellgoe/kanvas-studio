@@ -153,6 +153,9 @@ const ObjectMenu = ({ x, y, filename, style: extraStyle, onDelete }) => {
   const namespace = project.namespace;
   const objects = project.objects;
   const uploadMetadataFile = useCallback(updateRemoteMetadata, [objects]);
+  const object = objects.get(filename);
+  //TODO: set 100 based on a logical value, perhaps dynamic
+  const width = object.rect ? object.rect.width : 100;
   return (
     <div
       style={{
@@ -162,9 +165,14 @@ const ObjectMenu = ({ x, y, filename, style: extraStyle, onDelete }) => {
       }}
     >
       {open && (
-        <>
+        <div
+          style={{
+            left: `calc(${width}px - 100%)`,
+            position: "absolute",
+            transform: "translateX(-100%)"
+          }}
+        >
           <button
-            className="top-left"
             onClick={() => {
               dispatch(deleteObject(filename));
               //also need to delete is on s3 (this could be done in a redux saga, or here)
@@ -184,7 +192,7 @@ const ObjectMenu = ({ x, y, filename, style: extraStyle, onDelete }) => {
           >
             Delete
           </button>
-        </>
+        </div>
       )}
       <button
         onClick={() => {
@@ -218,15 +226,18 @@ const ObjectMedia = ({
     //pointerEvents: "none"
   };
   const isImage = dataForRender.isImage;
-  const mediaRef = useRef(null);
   const [rect, setRect] = useState({});
   const viewport = useSelector(state => state.viewport);
-  //get rect if viewport width changes, as media size can change based on viewport size.
-  useEffect(() => {
-    if (mediaRef && mediaRef.current && getRect) {
-      setRect(mediaRef.current.getBoundingClientRect());
-    }
-  }, [getRect, viewport]);
+  //also get rect if viewport width changes, as media size can change based on viewport size.
+  const mediaMeasuredRef = useCallback(
+    node => {
+      if (node !== null && getRect) {
+        setRect(node.getBoundingClientRect());
+      }
+    },
+    [getRect, viewport]
+  );
+
   const dispatch = useDispatch();
   const objects = useSelector(state => state.project.objects);
   useEffect(() => {
@@ -242,11 +253,14 @@ const ObjectMedia = ({
   if (isImage) {
     return (
       <img
-        ref={mediaRef}
+        ref={mediaMeasuredRef}
         src={dataForRender.src}
         alt={dataForRender.alt || "User uploaded"}
         loading="lazy"
         style={style}
+        onLoad={e => {
+          setRect(e.target.getBoundingClientRect());
+        }}
       />
     );
   }
