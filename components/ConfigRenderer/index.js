@@ -49,30 +49,33 @@ const typeToConfigItemMap: any = new Map([
 ]);
 type ConfigRendererProps = {
   className: string,
-  config: Array
+  config: Array,
+  dataForConfig: any
 };
 // This is a very generic renderer, taking config and outputting jsx.
-const ConfigRenderer = (styled(({ className = "", config = [] }) => {
-  className += " ConfigRenderer";
-  return (
-    <div className={className}>
-      {config.map(({ label, type, data }, index) => {
-        const { getJSX, layout }: ConfigItemType = typeToConfigItemMap.get(
-          type
-        );
-        return (
-          <div
-            key={index + className}
-            className={`flexible-container contains-${layout}-items`}
-          >
-            {label && <label>{label}</label>}
-            {getJSX(data)}
-          </div>
-        );
-      })}
-    </div>
-  );
-})`
+const ConfigRenderer = (styled(
+  ({ className = "", config = [], dataForConfig }) => {
+    className += " ConfigRenderer";
+    return (
+      <div className={className}>
+        {config.map(({ label, type, data }, index) => {
+          const { getJSX, layout }: ConfigItemType = typeToConfigItemMap.get(
+            type
+          );
+          return (
+            <div
+              key={index + className}
+              className={`flexible-container contains-${layout}-items`}
+            >
+              {label && <label>{label}</label>}
+              {getJSX(typeof data == "function" ? data(dataForConfig) : data)}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+)`
   .flexible-container {
     display: flex;
     justify-content: flex-start;

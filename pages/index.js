@@ -57,7 +57,7 @@ import {
   createBucketFolder,
   //upload file to a given namespace
   uploadFile,
-  deleteObject as deleteFile
+  deleteObject as deleteRemoteFile
 } from "../classes/S3Client";
 
 //JSON version of .env (built with yarn run build:env)
@@ -96,6 +96,26 @@ const throttledUploadFile = throttle(
   uploadFile
 );
 
+const updateRemoteMetadata = (namespace, objects) => {
+  //upload new metadata.json to /namespace
+  const myMetadataFile = new File(
+    [
+      JSON.stringify(
+        Array.from(objects, ([key, object]) => [
+          key,
+          selectFrom(object, ["position", "mediaType"])
+        ])
+      )
+    ],
+    "metadata.json",
+    {
+      type: "application/json"
+    }
+  );
+
+  uploadFile(namespace, [myMetadataFile], null, bypassS3);
+};
+
 const syncEnabledInitially = false;
 const msPerFrame = 30;
 const secondsPerSync = 60; //this automatically makes api call to AWS, so be careful not to set it too low.
@@ -121,6 +141,150 @@ const PointerMenu = ({
       }}
     >
       {children}
+    </div>
+  );
+};
+
+const ObjectMenu = ({ x, y, filename, style: extraStyle, onDelete }) => {
+  const [open, setOpen] = useState(false);
+  const dispatch = useDispatch();
+  const project = useSelector(state => state.project);
+  const namespace = project.namespace;
+  const objects = project.objects;
+  const uploadMetadataFile = useCallback(updateRemoteMetadata, [objects]);
+  return (
+    <div
+      style={{
+        transform: `translate(${x}px, ${y}px)`,
+        ...extraStyle
+        //pointerEvents: "none"
+      }}
+    >
+      {open && (
+        <>
+          <button
+            onClick={() => {
+              dispatch(deleteObject(filename));
+              //also need to delete is on s3 (this could be done in a redux saga, or here)
+              //it makes more sense to do it in redux-saga so it is done for every deleteObject action
+              //automatically, without needing to manually do it every time the action is dispatched.
+              deleteRemoteFile(namespace, filename)
+                .then(d => {
+                  console.warn("file", filename, "deleted from S3.", d);
+                })
+                .catch(err => {
+                  console.error(err);
+                });
+              //also overwrite metadata.json so it doesn't have this file in it
+              uploadMetadataFile(namespace, objects);
+              if (typeof onDelete == "function") onDelete();
+            }}
+          >
+            Delete
+          </button>
+          <p className="image-filename">{filename}</p>
+        </>
+      )}
+      <button
+        onClick={() => {
+          console.log("open?");
+          setOpen(open => !open);
+        }}
+      >
+        {open ? "Close menu" : "Open menu"}
+      </button>
+    </div>
+  );
+};
+const ObjectMedia = ({
+  x,
+  y,
+  filename,
+  dataForRender,
+  blobSrc,
+  mediaType,
+  style: extraStyle
+}) => {
+  const style = {
+    transform: `translate(${x}px, ${y}px)`,
+    position: "absolute",
+    ...extraStyle
+    //pointerEvents: "none"
+  };
+  const isImage = dataForRender.isImage;
+
+  if (isImage) {
+    return (
+      <img
+        src={dataForRender.src}
+        alt={dataForRender.alt || "User uploaded"}
+        loading="lazy"
+        style={style}
+      />
+    );
+  }
+  return (
+    <code style={style}>
+      Cannot render {<q>{filename}</q>}; unknown media{" "}
+      {mediaType && <q>{mediaType}</q>}
+    </code>
+  );
+};
+const ObjectRenderer = ({
+  Component,
+  containerStyles = {},
+  itemProps = {
+    style: {},
+    onDelete: null
+  },
+  x,
+  y
+}) => {
+  const project = useSelector(state => state.project);
+  const namespace = project.namespace;
+  const objects = project.objects;
+  return (
+    <div
+      className="objects-positioner"
+      style={{
+        transform: `translate(${x}px, ${y}px)`,
+        willChange: "transform",
+        ...containerStyles
+      }}
+    >
+      {Array.from(
+        objects,
+        (
+          [
+            filename,
+            {
+              dataForRender,
+              originalFile,
+              blobSrc,
+              position: { x, y } = { x: 0, y: 0 },
+              mediaType = ""
+            }
+          ],
+          index
+        ) => {
+          return (
+            <div key={filename + index} className="object-container">
+              <Component
+                {...{
+                  filename,
+                  dataForRender,
+                  blobSrc,
+                  originalFile,
+                  x,
+                  y,
+                  mediaType,
+                  ...itemProps
+                }}
+              />
+            </div>
+          );
+        }
+      )}
     </div>
   );
 };
@@ -281,145 +445,8 @@ const Orchestrator = (styled(
         setFrame(frame + 1);
       }, msPerFrame);
     }, [frame]);
-    const uploadMetadataFile = useCallback(
-      objects => {
-        //upload new metadata.json to /namespace
-        const myMetadataFile = new File(
-          [
-            JSON.stringify(
-              Array.from(objects, ([key, object]) => [
-                key,
-                selectFrom(object, ["position", "mediaType"])
-              ])
-            )
-          ],
-          "metadata.json",
-          {
-            type: "application/json"
-          }
-        );
+    const uploadMetadataFile = useCallback(updateRemoteMetadata, [objects]);
 
-        uploadFile(namespace, [myMetadataFile], null, bypassS3);
-      },
-      [objects]
-    );
-    const ObjectMenu = ({ x, y, filename, itemStyles }) => {
-      return (
-        <div
-          style={{
-            transform: `translate(${x}px, ${y}px)`,
-            ...itemStyles
-            //pointerEvents: "none"
-          }}
-        >
-          <button
-            onClick={() => {
-              dispatch(deleteObject(filename));
-              //also need to delete is on s3 (this could be done in a redux saga, or here)
-              //it makes more sense to do it in redux-saga so it is done for every deleteObject action
-              //automatically, without needing to manually do it every time the action is dispatched.
-              deleteFile(namespace, filename)
-                .then(d => {
-                  console.warn("file", filename, "deleted from S3.", d);
-                })
-                .catch(err => {
-                  console.error(err);
-                });
-              //also overwrite metadata.json so it doesn't have this file in it
-              uploadMetadataFile(objects);
-            }}
-          >
-            Delete
-          </button>
-          <p className="image-filename">{filename}</p>
-        </div>
-      );
-    };
-    const ObjectMedia = ({
-      x,
-      y,
-      dataForRender,
-      blobSrc,
-      mediaType,
-      itemStyles
-    }) => {
-      const style = {
-        transform: `translate(${x}px, ${y}px)`,
-        position: "absolute",
-        ...itemStyles
-        //pointerEvents: "none"
-      };
-      if (dataForRender.loading && blobSrc) {
-        dataForRender = {
-          isImage: true,
-          src: blobSrc,
-          isLocal: true,
-          alt: "Uploading..."
-        };
-      }
-      // if (dataForRender.loading) {
-      //   return <code style={style}>Loading</code>;
-      // }
-      const isImage = dataForRender.isImage;
-
-      if (isImage) {
-        return (
-          <img
-            src={dataForRender.src}
-            alt={dataForRender.alt || "User uploaded"}
-            loading="lazy"
-            style={style}
-          />
-        );
-      }
-      return (
-        <code style={style}>
-          Cannot render unknown media {mediaType && <q>{mediaType}</q>}
-        </code>
-      );
-    };
-    const makePositioner = (getJsx, containerStyles = {}, itemStyles = {}) => (
-      <div
-        className="objects-positioner"
-        style={{
-          transform: `translate(${ox}px, ${oy}px)`,
-          willChange: "transform",
-          ...containerStyles
-        }}
-      >
-        {Array.from(
-          objects,
-          (
-            [
-              filename,
-              {
-                dataForRender = { loading: true },
-                originalFile,
-                blobSrc,
-                position: { x, y } = { x: 0, y: 0 },
-                mediaType = ""
-              }
-            ],
-            index
-          ) => {
-            return (
-              <div key={filename + index} className="object-container">
-                {getJsx({
-                  filename,
-                  dataForRender,
-                  blobSrc,
-                  originalFile,
-                  x,
-                  y,
-                  mediaType,
-                  itemStyles
-                })}
-              </div>
-            );
-          }
-        )}
-      </div>
-    );
     return (
       <div className={className}>
         <div className="hud">
@@ -452,8 +479,14 @@ const Orchestrator = (styled(
                 setListenToPointer(false);
               }
             }}
-            onMouseOver={() => {
+            onMouseEnter={() => {
               if (!listeningToPointer) {
+                setListenToPointer(true);
+              }
+            }}
+            onMouseDown={() => {
+              if (!listeningToPointer) {
+                setPointer(null);
                 setListenToPointer(true);
               }
             }}
@@ -498,15 +531,35 @@ const Orchestrator = (styled(
             }}
             frame={frame}
           />
-          {makePositioner(
-            ObjectMenu,
-            { zIndex: 600 },
-            {
-              bottom: 0,
-              position: "absolute"
-            }
-          )}
-          {makePositioner(ObjectMedia, { zIndex: 400 })}
+          <ObjectRenderer
+            {...{
+              x: ox,
+              y: oy,
+              Component: ObjectMenu,
+              containerStyles: { zIndex: 600 },
+              itemProps: {
+                style: {
+                  bottom: 0,
+                  position: "absolute"
+                },
+                onDelete: () => {
+                  if (!listeningToPointer) {
+                    //hide pointer, and start listening for pointer events.
+                    setPointer(null);
+                    setListenToPointer(true);
+                  }
+                }
+              }
+            }}
+          />
+          <ObjectRenderer
+            {...{
+              x: ox,
+              y: oy,
+              Component: ObjectMedia,
+              containerStyles: { zIndex: 400 }
+            }}
+          />
         </div>
         {pointerMenu && (
           <PointerMenu
@@ -550,8 +603,8 @@ const Orchestrator = (styled(
                           bypassS3
                         );
                         dispatch(setObject(key, payload));
-
-                        uploadMetadataFile(objects);
+                        //update metadata e.g. positions for objects in s3
+                        uploadMetadataFile(namespace, objects);
                         //close menu
                         setPointerMenu(null);
                         //reset pointer (start listening to them again)
