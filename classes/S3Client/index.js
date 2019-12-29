@@ -3,7 +3,7 @@
 import S3 from "aws-sdk/clients/s3";
 import envConfig from "../../env.config.json";
 import getDist from "../../utils/getDist";
-
+import parseFileForRendering from "../../utils/parseFileForRendering";
 //polyfill Promise.allSettled + custom data
 const allSettled = promises => {
   let wrappedPromises = promises.map(({ promise, metadata }) =>
@@ -78,7 +78,12 @@ function getFolderKey(namespace) {
 }
 async function getMetadata(namespace, bypass = true) {
   if (bypass) {
-    return [["dummyfile.txt", { position: { x: 0, y: 0 } }]];
+    return [
+      [
+        "dummyfile.json",
+        { position: { x: 0, y: 0 }, mediaType: "application/json" }
+      ]
+    ];
   }
   const folderKey = getFolderKey(namespace);
   try {
@@ -91,11 +96,6 @@ async function getMetadata(namespace, bypass = true) {
     console.error("Error fetching metadata.json;", err);
     return null;
   }
-}
-function getSrcFromResponse(res) {
-  const blob = new Blob([res.Body], { type: res.ContentType });
-  const src = URL.createObjectURL(blob); //possibly `webkitURL` or another vendor prefix for old browsers.
-  return src;
 }
 const promiseToGetDummyS3Object = key => {
   return {
@@ -118,14 +118,15 @@ async function getNearestObjects(
   //for every position that is within range, get that file using the fileKey
   //sort the metadata so that the closest are loaded first
   const objects = metadataMap
-    .map(([key, { position }]) => {
+    .map(([key, { position, mediaType }]) => {
       //WARN: this mapping function assumes the metadata for this key is only the x, y position.
       //get dist from the given x, y which come from the canvas offset (aka camera position).
       const distance = getDist(position, { x, y });
       return {
         key,
         position,
-        distance
+        distance,
+        mediaType
       };
     })
     .filter(({ distance }) => {
@@ -139,7 +140,7 @@ async function getNearestObjects(
 
   //now have an array of { key, position, distance } within a given range
   //and want to get the actual object
-  const promises = objects.map(({ key, position, distance }) => {
+  const promises = objects.map(({ key, position, distance, mediaType }) => {
     return {
       promise: bypass
         ? promiseToGetDummyS3Object(key)
@@ -147,7 +148,8 @@ async function getNearestObjects(
       metadata: {
         key,
         position,
-        distance
+        distance,
+        mediaType
       }
     };
   });
@@ -157,11 +159,17 @@ async function getNearestObjects(
       console.warn("Couldn't load ", metadata.key, "\r\nReason:\r\n", reason);
       return Error(reason);
     }
-    const src = getSrcFromResponse(value);
+    const dataForRender = parseFileForRendering(value.Body, {
+      contentType: value.ContentType,
+      mediaType: metadata.mediaType,
+      filename: metadata.key
+    });
     return {
-      key: metadata.key,
-      src,
-      position: metadata.position
+      dataForRender,
+      ...metadata
+      // key: metadata.key,
+      // position: metadata.position,
+      // mediaType: metadata.mediaType
     };
   });
 
@@ -248,9 +256,9 @@ function uploadFile(bucketFolderName, files, metadata, bypass = true) {
     },
     (err, data) => {
       if (!err && data) {
-        console.warn("Successfully uploaded photo.");
+        console.warn("Successfully uploaded file.", data);
       } else {
-        console.warn("Error:" + err);
+        console.warn("Error:", err);
       }
     }
   );

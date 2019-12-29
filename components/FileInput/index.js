@@ -2,7 +2,9 @@
 
 import React, { type ComponentType } from "react";
 import styled from "styled-components";
-type ImageInputProps = {
+import { formats } from "../../config/mediaTypes";
+import parseFileForRendering from "../../utils/parseFileForRendering";
+type FileInputProps = {
   className?: string,
   showButton?: boolean,
   onChange: function
@@ -10,14 +12,16 @@ type ImageInputProps = {
 function processFiles(files) {
   const outputFiles = [];
   for (let file of files) {
-    //skip non image files
-    if (!file.type.startsWith("image/")) {
-      continue;
-    }
+    const blobSrc = URL.createObjectURL(file);
+    // //skip non image files
+    // if (!file.type.startsWith("image/")) {
+    //   console.warn("skipping file type", file.type);
+    //   continue;
+    // }
     console.log("handling file..", file);
     outputFiles.push({
       originalFile: file,
-      blobSrc: URL.createObjectURL(file)
+      blobSrc
     });
   }
   return outputFiles;
@@ -36,8 +40,8 @@ function processFiles(files) {
   //   reader.readAsDataURL(file);
   // }
 }
-const ImageInput = ({ className = "", showButton = true, onChange }) => {
-  className += " ImageInput";
+const FileInput = ({ className = "", showButton = true, onChange }) => {
+  className += " FileInput";
   return (
     <div className={className}>
       {showButton && (
@@ -46,7 +50,7 @@ const ImageInput = ({ className = "", showButton = true, onChange }) => {
           <input
             type="file"
             name="myImage"
-            accept="image/*"
+            accept={["image/*", "text/*", ...formats].join(", ")}
             onChange={e => {
               const files = e.target.files;
               const processedFiles = processFiles(files);
@@ -59,10 +63,10 @@ const ImageInput = ({ className = "", showButton = true, onChange }) => {
   );
 };
 
-const ImageInputStyled = (styled(ImageInput)`
+const FileInputStyled = (styled(FileInput)`
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   margin-top: 16px;
-`: ComponentType<ImageInputProps>);
-export default ImageInputStyled;
+`: ComponentType<FileInputProps>);
+export default FileInputStyled;

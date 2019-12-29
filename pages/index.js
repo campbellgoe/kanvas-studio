@@ -25,7 +25,7 @@ import styled from "styled-components";
 
 //react components
 import { ToastContainer } from "../components/ToastNotifications";
-import ImageInput from "../components/ImageInput";
+import FileInput from "../components/FileInput";
 import ProjectInput from "../components/ProjectInput";
 import Sync from "../components/Sync";
 import ConfigRenderer from "../components/ConfigRenderer";
@@ -289,7 +289,7 @@ const Orchestrator = (styled(
             JSON.stringify(
               Array.from(objects, ([key, object]) => [
                 key,
-                selectFrom(object, ["position"])
+                selectFrom(object, ["position", "mediaType"])
               ])
             )
           ],
@@ -303,11 +303,12 @@ const Orchestrator = (styled(
       },
       [objects]
     );
-    const ObjectMenu = ({ x, y, filename }) => {
+    const ObjectMenu = ({ x, y, filename, itemStyles }) => {
       return (
         <div
           style={{
-            transform: `translate(${x}px, ${y}px)`
+            transform: `translate(${x}px, ${y}px)`,
+            ...itemStyles
             //pointerEvents: "none"
           }}
         >
@@ -334,26 +335,56 @@ const Orchestrator = (styled(
         </div>
       );
     };
-    const ObjectImage = ({ x, y, src }) => {
+    const ObjectMedia = ({
+      x,
+      y,
+      dataForRender,
+      blobSrc,
+      mediaType,
+      itemStyles
+    }) => {
+      const style = {
+        transform: `translate(${x}px, ${y}px)`,
+        position: "absolute",
+        ...itemStyles
+        //pointerEvents: "none"
+      };
+      if (dataForRender.loading && blobSrc) {
+        dataForRender = {
+          isImage: true,
+          src: blobSrc,
+          isLocal: true,
+          alt: "Uploading..."
+        };
+      }
+      // if (dataForRender.loading) {
+      //   return <code style={style}>Loading</code>;
+      // }
+      const isImage = dataForRender.isImage;
+
+      if (isImage) {
+        return (
+          <img
+            src={dataForRender.src}
+            alt={dataForRender.alt || "User uploaded"}
+            loading="lazy"
+            style={style}
+          />
+        );
+      }
       return (
-        <img
-          src={src}
-          alt="User uploaded"
-          loading="lazy"
-          style={{
-            transform: `translate(${x}px, ${y}px)`
-            //pointerEvents: "none"
-          }}
-        />
+        <code style={style}>
+          Cannot render unknown media {mediaType && <q>{mediaType}</q>}
+        </code>
       );
     };
-    const makePositioner = (getJsx, zIndex = "") => (
+    const makePositioner = (getJsx, containerStyles = {}, itemStyles = {}) => (
       <div
         className="objects-positioner"
         style={{
           transform: `translate(${ox}px, ${oy}px)`,
           willChange: "transform",
-          zIndex
+          ...containerStyles
         }}
       >
         {Array.from(
@@ -361,13 +392,28 @@ const Orchestrator = (styled(
           (
             [
               filename,
-              { src, originalFile, position: { x, y } = { x: 0, y: 0 } }
+              {
+                dataForRender = { loading: true },
+                originalFile,
+                blobSrc,
+                position: { x, y } = { x: 0, y: 0 },
+                mediaType = ""
+              }
             ],
             index
           ) => {
             return (
-              <div key={src + index} className="object-container">
-                {getJsx({ filename, src, originalFile, x, y })}
+              <div key={filename + index} className="object-container">
+                {getJsx({
+                  filename,
+                  dataForRender,
+                  blobSrc,
+                  originalFile,
+                  x,
+                  y,
+                  mediaType,
+                  itemStyles
+                })}
               </div>
             );
           }
@@ -452,8 +498,15 @@ const Orchestrator = (styled(
             }}
             frame={frame}
           />
-          {makePositioner(ObjectMenu, "600")}
-          {makePositioner(ObjectImage, "400")}
+          {makePositioner(
+            ObjectMenu,
+            { zIndex: 600 },
+            {
+              bottom: 0,
+              position: "absolute"
+            }
+          )}
+          {makePositioner(ObjectMedia, { zIndex: 400 })}
         </div>
         {pointerMenu && (
           <PointerMenu
@@ -465,22 +518,35 @@ const Orchestrator = (styled(
                 {
                   type: "jsx",
                   data: (
-                    <ImageInput
+                    <FileInput
                       onChange={files => {
                         //ignore multiple files for now TODO: support selection of multiple files
                         const file = files[0];
                         const key = file.originalFile.name;
                         const position = pointerMenu.offsetPosition;
+                        const mediaType = file.originalFile.type;
+                        const blobSrc = file.blobSrc;
+                        console.log(
+                          "content type for",
+                          file.name,
+                          "is",
+                          mediaType
+                        );
                         const payload = {
                           position,
-                          src: file.blobSrc
+                          mediaType,
+                          blobSrc
                         };
                         console.log("file:", file);
                         //upload the file to S3
                         uploadFile(
                           namespace,
                           [file.originalFile],
-                          { position: JSON.stringify(position) },
+                          //metadata stored on the s3 object
+                          {
+                            position: JSON.stringify(position),
+                            "media-type": mediaType
+                          },
                           bypassS3
                         );
                         dispatch(setObject(key, payload));
