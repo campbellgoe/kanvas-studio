@@ -3,17 +3,9 @@
 import S3 from "aws-sdk/clients/s3";
 import envConfig from "../../env.config.json";
 import getDist from "../../utils/getDist";
+import allSettledWithMetadata from "../../utils/allSettledWithMetadata";
 import parseFileForRendering from "../../utils/parseFileForRendering";
-//polyfill Promise.allSettled + custom data
-const allSettled = promises => {
-  let wrappedPromises = promises.map(({ promise, metadata }) =>
-    Promise.resolve(promise).then(
-      val => ({ status: "fulfilled", value: val, metadata }),
-      err => ({ status: "rejected", reason: err, metadata })
-    )
-  );
-  return Promise.all(wrappedPromises);
-};
+//polyfill Promise.allSettledWithMetadata + custom data
 
 const accessKeyId = envConfig.AWS_CONFIG_KEY;
 const secretAccessKey = envConfig.AWS_CONFIG_SECRET;
@@ -140,7 +132,7 @@ async function getNearestObjects(
 
   //now have an array of { key, position, distance } within a given range
   //and want to get the actual object
-  const promises = objects.map(({ key, position, distance, mediaType }) => {
+  let promises = objects.map(({ key, position, distance, mediaType }) => {
     return {
       promise: bypass
         ? promiseToGetDummyS3Object(key)
@@ -153,17 +145,33 @@ async function getNearestObjects(
       }
     };
   });
-  const settled = await allSettled(promises);
-  return settled.map(({ status, value, reason, metadata }) => {
+  let settled = await allSettledWithMetadata(promises);
+  promises = settled.map(({ status, value, reason, metadata }) => {
     if (status === "rejected") {
       console.warn("Couldn't load ", metadata.key, "\r\nReason:\r\n", reason);
       return Error(reason);
     }
-    const dataForRender = parseFileForRendering(value.Body, {
-      contentType: value.ContentType,
-      mediaType: metadata.mediaType,
-      filename: metadata.key
-    });
+    return {
+      promise: parseFileForRendering(value.Body, {
+        contentType: value.ContentType,
+        mediaType: metadata.mediaType,
+        filename: metadata.key
+      }),
+      metadata
+    };
+  });
+  settled = await allSettledWithMetadata(promises);
+  return settled.map(({ status, value, reason, metadata }) => {
+    if (status === "rejected") {
+      console.warn(
+        "Couldn't parse file data of",
+        metadata.key,
+        "\r\nReason:\r\n",
+        reason
+      );
+      return Error(reason);
+    }
+    const dataForRender = value;
     return {
       dataForRender,
       ...metadata

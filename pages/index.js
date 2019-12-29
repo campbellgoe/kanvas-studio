@@ -523,9 +523,9 @@ const Orchestrator = (styled(
                         //ignore multiple files for now TODO: support selection of multiple files
                         const file = files[0];
                         const key = file.originalFile.name;
+                        const dataForRender = file.dataForRender;
                         const position = pointerMenu.offsetPosition;
                         const mediaType = file.originalFile.type;
-                        const blobSrc = file.blobSrc;
                         console.log(
                           "content type for",
                           file.name,
@@ -535,7 +535,7 @@ const Orchestrator = (styled(
                         const payload = {
                           position,
                           mediaType,
-                          blobSrc
+                          dataForRender
                         };
                         console.log("file:", file);
                         //upload the file to S3

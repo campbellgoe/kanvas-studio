@@ -4,27 +4,59 @@ import React, { type ComponentType } from "react";
 import styled from "styled-components";
 import { formats } from "../../config/mediaTypes";
 import parseFileForRendering from "../../utils/parseFileForRendering";
+import allSettledWithMetadata from "../../utils/allSettledWithMetadata";
 type FileInputProps = {
   className?: string,
   showButton?: boolean,
   onChange: function
 };
-function processFiles(files) {
-  const outputFiles = [];
+async function processFiles(files) {
+  const promises = [];
   for (let file of files) {
-    const blobSrc = URL.createObjectURL(file);
+    if (file.name === "metadata.json") {
+      alert(
+        "metadata.json is not currently an allowed filename, please rename it."
+      );
+      continue;
+    }
+    const promiseToGetDataForRender = parseFileForRendering(file, {
+      mediaType: file.type,
+      filename: file.name
+    });
+    //const blobSrc = URL.createObjectURL(file);
     // //skip non image files
     // if (!file.type.startsWith("image/")) {
     //   console.warn("skipping file type", file.type);
     //   continue;
     // }
     console.log("handling file..", file);
-    outputFiles.push({
-      originalFile: file,
-      blobSrc
+    promises.push({
+      promise: promiseToGetDataForRender,
+      metadata: {
+        filename: file.name,
+        originalFile: file
+      }
     });
   }
-  return outputFiles;
+  const settled = await allSettledWithMetadata(promises);
+  const filesWithDataForRender = settled.map(
+    ({ status, value, reason, metadata }) => {
+      if (status === "rejected") {
+        console.warn(
+          "Couldn't parse chosen file",
+          metadata.filename,
+          "\r\nReason:\r\n",
+          reason
+        );
+        return Error(reason);
+      }
+      return {
+        dataForRender: value,
+        ...metadata
+      };
+    }
+  );
+  return filesWithDataForRender;
   // for (let i = 0; i < files.length; i++) {
   //   const file = files[i];
 
@@ -51,10 +83,10 @@ const FileInput = ({ className = "", showButton = true, onChange }) => {
             type="file"
             name="myImage"
             accept={["image/*", "text/*", ...formats].join(", ")}
-            onChange={e => {
+            onChange={async function(e) {
               const files = e.target.files;
-              const processedFiles = processFiles(files);
-              onChange(processedFiles);
+              const processedFiles = await processFiles(files);
+              if (processedFiles.length) onChange(processedFiles);
             }}
           />
         </>
