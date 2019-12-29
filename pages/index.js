@@ -540,7 +540,8 @@ const Orchestrator = (styled(
               itemProps: {
                 style: {
                   bottom: 0,
-                  position: "absolute"
+                  position: "absolute",
+                  width: 0
                 },
                 onDelete: () => {
                   if (!listeningToPointer) {

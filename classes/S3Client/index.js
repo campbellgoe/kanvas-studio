@@ -12,6 +12,8 @@ const secretAccessKey = envConfig.AWS_CONFIG_SECRET;
 
 const bucketName = envConfig.S3_BUCKET_NAME;
 
+const maxCacheAgeSeconds = 60 * 60; //max age of 1 hour
+
 const s3config = {
   credentials: {
     accessKeyId,
@@ -296,15 +298,21 @@ function createBucketFolder(bucketFolderName, cb, bypass = true) {
         "There was an error creating your bucketFolder: " + err.message
       );
     }
-    s3.putObject({ Key: bucketFolderKey }, function(err, data) {
-      if (err) {
-        return console.warn(
-          "There was an error creating your bucketFolder: " + err.message
-        );
+    s3.putObject(
+      {
+        Key: bucketFolderKey,
+        CacheControl: "public, max-age=" + maxCacheAgeSeconds
+      },
+      function(err, data) {
+        if (err) {
+          return console.warn(
+            "There was an error creating your bucketFolder: " + err.message
+          );
+        }
+        console.warn("Successfully created bucketFolder.");
+        cb(data);
       }
-      console.warn("Successfully created bucketFolder.");
-      cb(data);
-    });
+    );
   });
 }
 
