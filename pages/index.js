@@ -17,7 +17,8 @@ import {
   setObject,
   setObjects,
   deleteObject,
-  moveObject
+  moveObject,
+  setViewport
 } from "../redux/actions.js";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -163,6 +164,7 @@ const ObjectMenu = ({ x, y, filename, style: extraStyle, onDelete }) => {
       {open && (
         <>
           <button
+            className="top-left"
             onClick={() => {
               dispatch(deleteObject(filename));
               //also need to delete is on s3 (this could be done in a redux saga, or here)
@@ -182,7 +184,6 @@ const ObjectMenu = ({ x, y, filename, style: extraStyle, onDelete }) => {
           >
             Delete
           </button>
-          <p className="image-filename">{filename}</p>
         </>
       )}
       <button
@@ -193,6 +194,7 @@ const ObjectMenu = ({ x, y, filename, style: extraStyle, onDelete }) => {
       >
         {open ? "Close menu" : "Open menu"}
       </button>
+      <p className="image-filename">{filename}</p>
     </div>
   );
 };
@@ -203,19 +205,44 @@ const ObjectMedia = ({
   dataForRender,
   blobSrc,
   mediaType,
-  style: extraStyle
+  style: extraStyle,
+  getRect = true
 }) => {
   const style = {
     transform: `translate(${x}px, ${y}px)`,
     position: "absolute",
+    maxWidth: "50vw",
+    minWidth: "32px",
+    height: "auto",
     ...extraStyle
     //pointerEvents: "none"
   };
   const isImage = dataForRender.isImage;
-
+  const mediaRef = useRef(null);
+  const [rect, setRect] = useState({});
+  const viewport = useSelector(state => state.viewport);
+  //get rect if viewport width changes, as media size can change based on viewport size.
+  useEffect(() => {
+    if (mediaRef && mediaRef.current && getRect) {
+      setRect(mediaRef.current.getBoundingClientRect());
+    }
+  }, [getRect, viewport]);
+  const dispatch = useDispatch();
+  const objects = useSelector(state => state.project.objects);
+  useEffect(() => {
+    const object = objects.get(filename);
+    //set latest bounding client rect for object.
+    dispatch(
+      setObject(filename, {
+        ...object,
+        rect
+      })
+    );
+  }, [filename, rect]);
   if (isImage) {
     return (
       <img
+        ref={mediaRef}
         src={dataForRender.src}
         alt={dataForRender.alt || "User uploaded"}
         loading="lazy"
@@ -316,6 +343,10 @@ const Orchestrator = (styled(
       logAttachChange: true,
       initialSize
     });
+    useEffect(() => {
+      dispatch(setViewport({ width, height }));
+    }, [width, height]);
+
     const [{ x: ox, y: oy }, setOffset] = useState({ x: 0, y: 0 });
     const [{ oxLast, oyLast }, setLastOffset] = useState({
       oxLast: 0,
@@ -539,7 +570,6 @@ const Orchestrator = (styled(
               containerStyles: { zIndex: 600 },
               itemProps: {
                 style: {
-                  bottom: 0,
                   position: "absolute",
                   width: 0
                 },
@@ -723,6 +753,8 @@ const Orchestrator = (styled(
   .image-filename {
     display: inline-block;
     margin-left: 16px;
+    position: absolute;
+    bottom: 100%;
   }
   .objects-positioner {
     position: absolute;

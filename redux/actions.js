@@ -49,3 +49,8 @@ export const moveObject = (key, position) => ({
   key,
   position
 });
+
+//viewport
+export const SET_VIEWPORT = "SET_VIEWPORT";
+
+export const setViewport = size => ({ type: SET_VIEWPORT, size });
