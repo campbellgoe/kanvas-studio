@@ -479,9 +479,11 @@ const Orchestrator = (styled(
             }
           }
         } else {
-          console.log("not dragging");
           if (pointerModifier.dragItem) {
+            console.log("stopped dragging item");
             dispatch(setPointerModifier({ dragItem: "" }));
+            //update metadata e.g. positions for objects in s3
+            uploadMetadataFile(namespace, objects);
           }
         }
         //on mouse up, save last offset x,y and add that to the offset when dragging.
