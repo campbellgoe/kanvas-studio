@@ -100,6 +100,9 @@ export const registerMouseAndTouchEventListeners = (
     } else if (e.type.endsWith("move")) {
       isMove = true;
     }
+    // if (isMove && x === downPosition.x && y === downPosition.y) {
+    //   isMove = false; //not moving, down pos and pos are equal
+    // }
     const isDrag = isDown && isMove;
     cb({
       x,

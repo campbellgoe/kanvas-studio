@@ -18,7 +18,9 @@ import {
   setObjects,
   deleteObject,
   moveObject,
-  setViewport
+  setViewport,
+  setPointer,
+  setPointerModifier
 } from "../redux/actions.js";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -156,6 +158,7 @@ const ObjectMenu = ({ x, y, filename, style: extraStyle, onDelete }) => {
   const object = objects.get(filename);
   //TODO: set 100 based on a logical value, perhaps dynamic
   const width = object.rect ? object.rect.width : 100;
+  const pointer = useSelector(state => state.pointer);
   return (
     <div
       style={{
@@ -196,8 +199,26 @@ const ObjectMenu = ({ x, y, filename, style: extraStyle, onDelete }) => {
       )}
       <button
         onClick={() => {
-          console.log("open?");
+          console.log("open?", pointer);
+          //TODO: if dragged the item any distance, don't open/close menu.
+          //... only when no dragging occured should it toggle open.
           setOpen(open => !open);
+        }}
+        onMouseDown={() => {
+          dispatch(
+            setPointerModifier({
+              dragItem: filename
+            })
+          );
+        }}
+        onMouseOut={() => {
+          // if (!pointer.isDrag) {
+          //   dispatch(
+          //     setPointerModifier({
+          //       dragItem: ""
+          //     })
+          //   );
+          // }
         }}
       >
         {open ? "Close menu" : "Open menu"}
@@ -413,8 +434,9 @@ const Orchestrator = (styled(
     }, [namespace]);
 
     const elCanvasContainer = useRef(null);
+    const pointerModifier = useSelector(state => state.pointer.modifier);
     const [
-      [pointer, setPointer],
+      [pointer],
       [listeningToPointer, setListenToPointer]
     ] = usePointerEventListener(
       elCanvasContainer,
@@ -423,6 +445,13 @@ const Orchestrator = (styled(
         const lox = pointer.x - pointer.downPos.x + oxLast;
         const loy = pointer.y - pointer.downPos.y + oyLast;
         //console.log('pointer:', pointer);
+        if (pointerModifier.dragItem) {
+          if (pointer.isDown) {
+            pointer.isDrag = true;
+          } else {
+            pointer.isDrag = false;
+          }
+        }
         if (pointer.isDrag) {
           //change x,y canvas offset
 
@@ -430,10 +459,29 @@ const Orchestrator = (styled(
             setSwoopToOrigin(false);
             setLastOffset({ oxLast: ox, oyLast: oy });
           } else {
-            setOffset({
-              x: lox,
-              y: loy
-            });
+            if (pointerModifier.dragItem) {
+              //console.log("dragging with modifier", pointerModifier.dragItem);
+              const object = objects.get(pointerModifier.dragItem);
+              dispatch(
+                setObject(pointerModifier.dragItem, {
+                  ...object,
+                  position: {
+                    x: pointer.x - ox,
+                    y: pointer.y - oy
+                  }
+                })
+              );
+            } else {
+              setOffset({
+                x: lox,
+                y: loy
+              });
+            }
+          }
+        } else {
+          console.log("not dragging");
+          if (pointerModifier.dragItem) {
+            dispatch(setPointerModifier({ dragItem: "" }));
           }
         }
         //on mouse up, save last offset x,y and add that to the offset when dragging.
@@ -453,10 +501,12 @@ const Orchestrator = (styled(
           //(and release the mouse so that next lastOffset is set on the correct frame, to stop a frame jump)
           if (swoopToOrigin) {
             setSwoopToOrigin(false);
-            setPointer(pointer => ({
-              ...pointer,
-              isDown: false
-            }));
+            dispatch(
+              setPointer({
+                ...pointer,
+                isDown: false
+              })
+            );
           }
         } else {
           //on mouse up
@@ -519,11 +569,11 @@ const Orchestrator = (styled(
             width={width}
             height={height}
             hideCursor={listeningToPointer}
-            onMouseOut={() => {
-              if (pointer && !pointer.isDown && listeningToPointer) {
-                setListenToPointer(false);
-              }
-            }}
+            // onMouseOut={() => {
+            //   if (pointer && !pointer.isDown && listeningToPointer) {
+            //     setListenToPointer(false);
+            //   }
+            // }}
             onMouseEnter={() => {
               if (!listeningToPointer) {
                 setListenToPointer(true);
@@ -531,7 +581,7 @@ const Orchestrator = (styled(
             }}
             onMouseDown={() => {
               if (!listeningToPointer) {
-                setPointer(null);
+                dispatch(setPointer(null));
                 setListenToPointer(true);
               }
             }}
@@ -590,7 +640,7 @@ const Orchestrator = (styled(
                 onDelete: () => {
                   if (!listeningToPointer) {
                     //hide pointer, and start listening for pointer events.
-                    setPointer(null);
+                    dispatch(setPointer(null));
                     setListenToPointer(true);
                   }
                 }
@@ -653,7 +703,7 @@ const Orchestrator = (styled(
                         //close menu
                         setPointerMenu(null);
                         //reset pointer (start listening to them again)
-                        setPointer(null);
+                        dispatch(setPointer(null));
                         setListenToPointer(true);
                       }}
                     />

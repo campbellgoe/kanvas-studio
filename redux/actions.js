@@ -54,3 +54,18 @@ export const moveObject = (key, position) => ({
 export const SET_VIEWPORT = "SET_VIEWPORT";
 
 export const setViewport = size => ({ type: SET_VIEWPORT, size });
+
+//pointer
+export const SET_POINTER_MODIFIER = "SET_POINTER_MODIFIER";
+
+export const setPointerModifier = modifier => ({
+  type: SET_POINTER_MODIFIER,
+  modifier
+});
+
+export const SET_POINTER = "SET_POINTER";
+
+export const setPointer = pointer => ({
+  type: SET_POINTER,
+  pointer
+});
