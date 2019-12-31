@@ -72,6 +72,7 @@ const bypassS3 = false;
 if (bypassS3 !== true) {
   console.error("WARN: Not bypassing requests to s3. This may cost money.");
 }
+//TODO: import/export so files/metadata can be exchanged locally/offline (think about kvStorage or similar)
 
 //in case a user does many actions in a short time, the minimum is this.
 const minimumSecondsPerSync = envConfig.S3_SYNC_THROTTLER_SECONDS || 30;
@@ -350,6 +351,74 @@ const ObjectRenderer = ({
     </div>
   );
 };
+type LoadingHudProps = {
+  className: string,
+  loaded: any,
+  displayLoadedMs: number
+};
+const LoadingHUD = (styled(
+  ({ className = "", loaded, allowDisplayLoadedMs = 450 }) => {
+    className += " LoadingHUD";
+    let items = [];
+    //for all not yet loaded items, display that that item is loading.
+    for (let item in loaded) {
+      if (loaded[item] !== true) {
+        items.push("Loading " + item + "...");
+      }
+    }
+    //TODO: refactor this (: o: or just use ToastNofications !?!?... :o :)
+    const [allowDisplayLoaded, setAllowDisplayLoaded] = useState(false);
+    const [intervalId, setIntervalId] = useState(null);
+    //if all items are loaded, display for some duration that they have loaded.
+    useEffect(() => {
+      //if allowed to display loaded (for some duration), and all items have actually loaded, set a timeout for when to hide the loaded notification.
+      if (allowDisplayLoadedMs) {
+        //if all items have loaded
+        if (!items.length && !intervalId) {
+          //explicitly set that loaded can be displayed, and set the timeout
+          setAllowDisplayLoaded(true);
+          console.log("set timeout///");
+          //duration after which Loaded will no longer be displayed.
+          setIntervalId(
+            setTimeout(() => {
+              console.log("hide loaded...");
+              setAllowDisplayLoaded(false);
+            }, allowDisplayLoadedMs)
+          );
+        } else if (items.length && intervalId) {
+          console.log("items.length:", items.length);
+          //in case new items become loading when the interval to stop displaying loading has been set, clear them.
+          setAllowDisplayLoaded(false);
+          clearTimeout(intervalId);
+        }
+      }
+    }, [items, intervalId, allowDisplayLoadedMs]);
+    //TODO: also refactor this bit...
+    return items.length ? (
+      <div className={className}>
+        {items.map((item, index) => {
+          return <span key={item}>{item}</span>;
+        })}
+      </div>
+    ) : (
+      allowDisplayLoaded && <div className={className}>Loaded!</div>
+    );
+  }
+)`
+  background-color: #5276b0;
+  color: white;
+  font-size: 16px;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 8px;
+  border-radius: 3px;
+`: ComponentType<LoadingHudProps>);
 
 //TODO: define initialSize via deviceType e.g. mobile will be something like 480×800 whereas xtop will be more like 1400x800
 //TODO: also actually apply the initialSize to the canvas width/height attributes for SSR first render.
@@ -413,15 +482,24 @@ const Orchestrator = (styled(
     const namespace = project.namespace;
     const objects = project.objects;
     const [liveNamespaces, setLiveNamespaces] = useState([]);
+    const [loaded, setLoaded] = useState({
+      namespaces: false,
+      "nearest objects": false
+    });
     const [prevSyncTime, setPrevSyncTime] = useState("Never");
     const onSync = useCallback(() => {
       //set namespaces listed in the S3 bucket
-      throttledListBucketFolders(setLiveNamespaces, bypassS3);
+      throttledListBucketFolders(namespaces => {
+        setLiveNamespaces(namespaces);
+        setLoaded(loaded => ({ ...loaded, namespaces: true }));
+      }, bypassS3);
+
       console.log("namespace:", namespace);
       getNearestObjects(namespace, { x: 0, y: 0, range: 99999 }, bypassS3).then(
         objects => {
           console.log("photos:", objects);
           dispatch(setObjects(objects, { overwrite: true }));
+          setLoaded(loaded => ({ ...loaded, "nearest objects": true }));
           dispatch(
             createNotification({
               text: `Found ${objects.length} nearby files.`,
@@ -546,6 +624,11 @@ const Orchestrator = (styled(
 
     return (
       <div className={className}>
+        <LoadingHUD
+          className="OrchestratorLoadingHUD"
+          loaded={loaded}
+          displayLoadedMs={600}
+        />
         <div className="hud">
           {namespace && (
             <span className="hud-item">Local namespace: {namespace}</span>

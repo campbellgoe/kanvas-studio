@@ -87,7 +87,18 @@ async function getMetadata(namespace, bypass = true) {
     //return metadata
     return JSON.parse(data.Body.toString());
   } catch (err) {
-    console.error("Error fetching metadata.json;", err);
+    console.warn(
+      "Error fetching metadata.json;",
+      err,
+      "looking for local version."
+    );
+    //try to get local version from local storage
+    try {
+      const data = localStorage.getItem(namespace + "/metadata.json");
+      return JSON.parse(data);
+    } catch (err) {
+      console.error("Error getting local version of metadata.json;", err);
+    }
     return null;
   }
 }
@@ -151,6 +162,16 @@ async function getNearestObjects(
   promises = settled.map(({ status, value, reason, metadata }) => {
     if (status === "rejected") {
       console.warn("Couldn't load ", metadata.key, "\r\nReason:\r\n", reason);
+      console.warn(
+        "attempting to load data for",
+        metadata.key,
+        "from local storage."
+      );
+      try {
+        value.Body = localStorage.getItem(namespace + "/" + metadata.key);
+      } catch (err) {
+        return err;
+      }
       return Error(reason);
     }
     return {
@@ -270,6 +291,8 @@ function uploadFile(bucketFolderName, files, metadata, bypass = true) {
       } else {
         console.warn("Error:", err);
       }
+      //save to local storage (the filename, so it can render something and say 'server down' or similar)
+      localStorage.setItem(namespace + "/metadata.json", file.name);
     }
   );
 }
