@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "yarn run build:env && yarn run flow && node server.js",
-    "build": "yarn run build:env && flow-typed update && yarn run flow && next build",
+    "build": "yarn run build:env && rm -rf flow-typed && flow-typed update && cp -r types flow-typed/types && yarn run flow && next build",
     "start": "yarn run build:env && yarn run flow && cross-env NODE_ENV=production node server.js",
     "siege": "siege -c255 -t1M http://localhost:4424",
     "set:env": "bash bin/set.env.sh",
