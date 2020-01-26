@@ -1,15 +1,15 @@
-// @flow
+//      
 
-import React, { type ComponentType } from "react";
+import React, {                    } from "react";
 import styled from "styled-components";
 import { formats } from "../../config/mediaTypes";
 import parseFileForRendering from "../../utils/parseFileForRendering";
 import allSettledWithMetadata from "../../utils/allSettledWithMetadata";
-type FileInputProps = {
-  className?: string,
-  showButton?: boolean,
-  onChange: function
-};
+                       
+                     
+                       
+                    
+  
 async function processFiles(files) {
   const promises = [];
   for (let file of files) {
@@ -100,5 +100,5 @@ const FileInputStyled = (styled(FileInput)`
   flex-direction: column;
   justify-content: flex-start;
   margin-top: 16px;
-`: ComponentType<FileInputProps>);
+`                               );
 export default FileInputStyled;

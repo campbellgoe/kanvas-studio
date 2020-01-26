@@ -1,4 +1,4 @@
-// @flow
+//      
 import React, { useState, useEffect } from 'react';
 import RelativeTimeFormat from "relative-time-format"
 import en from "relative-time-format/locale/en.json"
@@ -16,13 +16,13 @@ const Sync = ({
   secondsPerSync,
   //milliseconds since last sync (or if a string, render that)
   prevSyncTime = "Never",
-}: {
-  onSync: function,
-  syncInitially: boolean,
-  syncEnabledInitially: boolean,
-  prevSyncTime: string | number,
-  secondsPerSync: number,
-}) => {
+}   
+                   
+                         
+                                
+                                
+                         
+ ) => {
   const [syncEnabled, setSyncEnabled] = useState(syncEnabledInitially);
   //an array in case a race condition causes multiple intervals to be set
   //and therefore ensure all intervals are able to be cleared

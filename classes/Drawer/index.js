@@ -1,11 +1,11 @@
-// @flow
+//      
 
 class Drawer {
-  ctx: CanvasRenderingContext2D;
-  constructor(ctx: CanvasRenderingContext2D) {
+                                
+  constructor(ctx                          ) {
     this.ctx = ctx;
   }
-  line(xStart: number, yStart: number, xEnd: number, yEnd: number) {
+  line(xStart        , yStart        , xEnd        , yEnd        ) {
     const ctx = this.ctx;
     ctx.moveTo(xStart, yStart);
     ctx.lineTo(xEnd, yEnd);
@@ -14,7 +14,7 @@ class Drawer {
   //ex, ey = end x, y.
   //cellSize is distance between lines
   //grid will automatically fill the area given by sx,sy,ex,ey with gridlines of cellSize apart.
-  grid(sx: number, sy: number, ex: number, ey: number, cellSize: number) {
+  grid(sx        , sy        , ex        , ey        , cellSize        ) {
     const ctx = this.ctx;
     const width = ex - sx;
     const height = ey - sy;
@@ -32,14 +32,14 @@ class Drawer {
     ctx.stroke();
     ctx.closePath();
   }
-  circle(x: number, y: number, radius: number) {
+  circle(x        , y        , radius        ) {
     this.ctx.arc(x, y, radius, 0, Math.PI * 2);
   }
-  cross(x: number, y: number, size: number) {
+  cross(x        , y        , size        ) {
     this.line(x, y - size, x, y + size);
     this.line(x - size, y, x + size, y);
   }
-  polygon(...args: Array<number>) {
+  polygon(...args               ) {
     if (args.length % 2 === 1)
       throw new Error(
         "Odd number of arguments. Only accepts sets of 2 arguments each representing x, y coordinates."
@@ -55,7 +55,7 @@ class Drawer {
       ctx.lineTo(x, y);
     }
   }
-  supperfluousCrosshair(pointer: any, size: number) {
+  supperfluousCrosshair(pointer     , size        ) {
     const ctx = this.ctx;
     const draw = this;
     const { x, y, isDown } = pointer;

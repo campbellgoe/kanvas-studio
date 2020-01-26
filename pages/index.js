@@ -1,4 +1,4 @@
-// @flow
+//      
 
 //initial mock window so SSR won't kill app when window is accessed during initialisation
 import { window } from "ssr-window";
@@ -9,7 +9,7 @@ import React, {
   useEffect,
   useState,
   useCallback,
-  type ComponentType
+                    
 } from "react";
 import {
   createNotification,
@@ -124,16 +124,16 @@ const syncEnabledInitially = false;
 const msPerFrame = 30;
 const secondsPerSync = 60; //this automatically makes api call to AWS, so be careful not to set it too low.
 
-type PointerMenuProps = {
-  className: string,
-  position: { x: number, y: number },
-  children: any
-};
+                         
+                    
+                                     
+               
+  
 const PointerMenu = ({
   className = "",
   position: { x, y },
   children
-}: PointerMenuProps) => {
+}                  ) => {
   return (
     <div
       className={className}
@@ -351,11 +351,11 @@ const ObjectRenderer = ({
     </div>
   );
 };
-type LoadingHudProps = {
-  className: string,
-  loaded: any,
-  displayLoadedMs: number
-};
+                        
+                    
+              
+                         
+  
 const LoadingHUD = (styled(
   ({ className = "", loaded, allowDisplayLoadedMs = 450 }) => {
     className += " LoadingHUD";
@@ -418,17 +418,17 @@ const LoadingHUD = (styled(
   transform: translate(-50%, -50%);
   padding: 8px;
   border-radius: 3px;
-`: ComponentType<LoadingHudProps>);
+`                                );
 
 //TODO: define initialSize via deviceType e.g. mobile will be something like 480×800 whereas xtop will be more like 1400x800
 //TODO: also actually apply the initialSize to the canvas width/height attributes for SSR first render.
 const initialSize = { width: 480, height: 800 };
 const gridCellSizeDivisor = 40; //divisions per width or height (based on which is larger)
-type OrchestratorProps = {
-  className: string,
-  initialSize: { width: number, height: number },
-  swoopToOriginOnStart: boolean
-};
+                          
+                    
+                                                 
+                               
+  
 
 const Orchestrator = (styled(
   ({ className = "", initialSize, swoopToOriginOnStart = true }) => {
@@ -929,11 +929,11 @@ const Orchestrator = (styled(
       position: relative;
     }
   }
-`: ComponentType<OrchestratorProps>);
+`                                  );
 
-type KanvasStudioProps = {
-  className: string
-};
+                          
+                   
+  
 const KanvasStudio = (styled(({ className = "" }) => {
   className += " KanvasStudio";
   return (
@@ -965,6 +965,6 @@ const KanvasStudio = (styled(({ className = "" }) => {
     padding: 0;
     background-color: #eeeeee;
   }
-`: ComponentType<KanvasStudioProps>);
+`                                  );
 
 export default withRedux(KanvasStudio);

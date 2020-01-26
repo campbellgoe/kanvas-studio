@@ -1,13 +1,13 @@
-// @flow
+//      
 
-import React, { type ComponentType, useState } from "react";
+import React, {                     useState } from "react";
 import styled from "styled-components";
-type ProjectInputProps = {
-  className?: string,
-  onApplyChanges: function,
-  onChange?: function,
-  namespace: string
-};
+                          
+                     
+                           
+                      
+                   
+  
 const ProjectInput = ({
   className = "",
   namespace = "",
@@ -52,5 +52,5 @@ const ProjectInputStyled = (styled(ProjectInput)`
   justify-content: flex-start;
   margin-top: 16px;
   background-color: #eeeeee;
-`: ComponentType<ProjectInputProps>);
+`                                  );
 export default ProjectInputStyled;

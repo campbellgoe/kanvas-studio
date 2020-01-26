@@ -1,6 +1,6 @@
-// @flow
+//      
 
-const formatRelativeTime = (rtf: { format: function }, prevSyncTimeMs: number) => {
+const formatRelativeTime = (rtf                      , prevSyncTimeMs        ) => {
   let diffInSeconds = ((prevSyncTimeMs - Date.now())/1000);
   const absDiff = Math.abs(diffInSeconds);
   let outputDiff = Math.ceil(diffInSeconds);

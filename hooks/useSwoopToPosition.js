@@ -1,29 +1,29 @@
-// @flow
+//      
 import { useState, useEffect } from "react";
 import getDist from "../utils/getDist.js";
 //swoop to position with ease
 function useSwoopToPosition(
-  position: function,
-  setPosition: function,
+  position          ,
+  setPosition          ,
   {
     swoopOnStart = true,
     easeAmount = 4,
     onTargetReached,
     targetRadius = 1
-  }: {
-    swoopOnStart?: boolean,
-    easeAmount?: number,
-    onTargetReached?: function,
-    targetRadius?: number
-  },
-  deps: []
+  }   
+                           
+                        
+                               
+                         
+   ,
+  deps    
 ) {
-  const [swoopToPosition, setSwoopToPosition]: [boolean, function] = useState(
+  const [swoopToPosition, setSwoopToPosition]                      = useState(
     swoopOnStart
   );
   useEffect(() => {
     if (swoopToPosition) {
-      const targetPos: PointType = position();
+      const targetPos            = position();
       setPosition(({ x: currentX, y: currentY }) => {
         const outputPos = {
           x: currentX + (targetPos.x - currentX) / easeAmount,

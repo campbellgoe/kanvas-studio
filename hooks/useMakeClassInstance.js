@@ -1,11 +1,11 @@
-// @flow
+//      
 import { useRef, useState, useEffect } from 'react';
 //hook to efficiently instantiate a new instance of some class
-function useMakeClassInstance(Class: any, props?: [] = []){
-  const refObject: { current: null | {} } = useRef(null);
+function useMakeClassInstance(Class     , props      = []){
+  const refObject                         = useRef(null);
   const [instance, setInstance] = useState(null);
 
-  const getInstance = (...args: any) => {
+  const getInstance = (...args     ) => {
     if (refObject.current === null) {
       refObject.current = new Class(...args);
     }
