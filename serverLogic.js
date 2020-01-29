@@ -7,6 +7,7 @@ const device = require("device");
 const port = parseInt(process.env.PORT, 10) || 3000;
 const production = process.env.NODE_ENV === "production";
 const enableCaching = process.env.ENABLE_CACHING === "true";
+const bucketName = process.env.S3_BUCKET_NAME;
 
 function renderApp(app, req, res, pathOverride = "") {
   return app.render(req, res, pathOverride || (req.baseUrl || "") + req.path, {
@@ -26,7 +27,8 @@ function serverLogic({ app, rateLimiter }) {
     server.use(
       helmet.contentSecurityPolicy({
         directives: {
-          defaultSrc: ["'self'"],
+          defaultSrc: [`'self'`],
+          connectSrc: [`https://s3.eu-west-2.amazonaws.com/${bucketName}`],
           styleSrc: [`'self'`, `'unsafe-inline'`],
           scriptSrc: [`'self'`],
           fontSrc: ["fonts.gstatic.com"],
@@ -59,7 +61,7 @@ function serverLogic({ app, rateLimiter }) {
   server.use(bodyParser.json());
 
   //rate limit all routes to help protect against DDOS
-  if(rateLimiter) server.use(rateLimiter(false));
+  if (rateLimiter) server.use(rateLimiter(false));
 
   //handle contact form
   //server.post("/contact", contactFormLogicFactory({ emailTransporter }));
