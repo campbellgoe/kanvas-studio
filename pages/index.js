@@ -8,8 +8,7 @@ import React, {
   useRef,
   useEffect,
   useState,
-  useCallback,
-                    
+  useCallback,        
 } from "react";
 import {
   createNotification,
@@ -67,10 +66,12 @@ import {
 import envConfig from "../env.config.json";
 
 //WARN: setting this to false makes real requests to S3, which can cost money, for example if stupid infinite loops occur overnight.
-const bypassS3 = false;
+const bypassS3 = process.env.BYPASS_S3 == "true";
 
 if (bypassS3 !== true) {
   console.error("WARN: Not bypassing requests to s3. This may cost money.");
+} else {
+  console.log("Bypassing requests to S3");
 }
 //TODO: import/export so files/metadata can be exchanged locally/offline (think about kvStorage or similar)
 
@@ -888,6 +889,7 @@ const Orchestrator = (styled(
           syncEnabledInitially={syncEnabledInitially}
           prevSyncTime={prevSyncTime}
         />
+        <SideMenu/>
       </div>
     );
   }
@@ -929,9 +931,14 @@ const Orchestrator = (styled(
       position: relative;
     }
   }
-`                                  );
+`);
 
-                          
+const SideMenu = (styled(({ className = '' }) => {
+	className += " SideMenu";
+	return (<div className={className}>SideMenu</div>);
+})`
+  background: red;
+`)
                    
   
 const KanvasStudio = (styled(({ className = "" }) => {
