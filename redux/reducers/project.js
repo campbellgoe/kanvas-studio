@@ -129,7 +129,7 @@ const projectReducer = (state = initialState, action) => {
       const position = action.position;
       const objects = state.objects;
       mustHave(action, "key", "string");
-      mustHaveOfShape(action, "position", { x: "number", y: "number" });
+      mustHaveOfShape(action, "position", { x: "number", y: "number", z: "number" });
       const objectToMove = objects.get(key);
       return {
         ...state,

@@ -75,7 +75,7 @@ async function getMetadata(namespace, bypass = true) {
     return [
       [
         "dummyfile.json",
-        { position: { x: 0, y: 0 }, mediaType: "application/json" }
+        { position: { x: 0, y: 0, z: -1, }, mediaType: "application/json" }
       ]
     ];
   }

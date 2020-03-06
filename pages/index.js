@@ -65,6 +65,15 @@ import {
 //JSON version of .env (built with yarn run build:env)
 import envConfig from "../env.config.json";
 
+//sort an array of numbers and get the highest value
+function getLargestNumber(nums){
+  const sortedNums = nums.sort((a, b) => a-b);
+  return sortedNums[sortedNums.length-1];
+}
+function valuesFromMap(m, mapFn = noop => noop){
+  return Array.from(m, ([key, value]) => mapFn(value));
+}
+
 //WARN: setting this to false makes real requests to S3, which can cost money, for example if stupid infinite loops occur overnight.
 const bypassS3 = process.env.BYPASS_S3 == "true";
 
@@ -229,9 +238,11 @@ const ObjectMenu = ({ x, y, filename, style: extraStyle, onDelete }) => {
     </div>
   );
 };
+
 const ObjectMedia = ({
   x,
   y,
+  z = 0,
   filename,
   dataForRender,
   blobSrc,
@@ -245,6 +256,7 @@ const ObjectMedia = ({
     maxWidth: "50vw",
     minWidth: "32px",
     height: "auto",
+    zIndex: z,
     ...extraStyle
     //pointerEvents: "none"
   };
@@ -325,7 +337,7 @@ const ObjectRenderer = ({
               dataForRender,
               originalFile,
               blobSrc,
-              position: { x, y } = { x: 0, y: 0 },
+              position: { x, y, z } = { x: 0, y: 0, z: 0 },
               mediaType = ""
             }
           ],
@@ -429,7 +441,7 @@ const gridCellSizeDivisor = 40; //divisions per width or height (based on which 
                     
                                                  
                                
-  
+
 
 const Orchestrator = (styled(
   ({ className = "", initialSize, swoopToOriginOnStart = true }) => {
@@ -524,6 +536,7 @@ const Orchestrator = (styled(
         const lox = pointer.x - pointer.downPos.x + oxLast;
         const loy = pointer.y - pointer.downPos.y + oyLast;
         //console.log('pointer:', pointer);
+        //if has an item being dragged, set pointer.isDrag
         if (pointerModifier.dragItem) {
           if (pointer.isDown) {
             pointer.isDrag = true;
@@ -546,7 +559,9 @@ const Orchestrator = (styled(
                   ...object,
                   position: {
                     x: pointer.x - ox,
-                    y: pointer.y - oy
+                    y: pointer.y - oy,
+                    //get highest z value + 1 and set as the z
+                    z: getLargestNumber(valuesFromMap(objects, object => object.position.z))+1,
                   }
                 })
               );
