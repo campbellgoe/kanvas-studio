@@ -1,10 +1,10 @@
-//      
-import React, { useState, useEffect } from 'react';
-import RelativeTimeFormat from "relative-time-format"
-import en from "relative-time-format/locale/en.json"
-RelativeTimeFormat.addLocale(en)
-import { useMakeClassInstance } from '../../hooks';
-import { formatRelativeTime } from '../../utils';
+//
+import React, { useState, useEffect } from "react";
+import RelativeTimeFormat from "relative-time-format";
+import en from "relative-time-format/locale/en.json";
+RelativeTimeFormat.addLocale(en);
+import { useMakeClassInstance } from "../../hooks";
+import { formatRelativeTime } from "../../utils";
 const Sync = ({
   //what user wants to run when sync
   onSync,
@@ -15,24 +15,21 @@ const Sync = ({
   // seconds to wait before triggering the onSync function
   secondsPerSync,
   //milliseconds since last sync (or if a string, render that)
-  prevSyncTime = "Never",
-}   
-                   
-                         
-                                
-                                
-                         
- ) => {
+  prevSyncTime = "Never"
+}) => {
   const [syncEnabled, setSyncEnabled] = useState(syncEnabledInitially);
   //an array in case a race condition causes multiple intervals to be set
   //and therefore ensure all intervals are able to be cleared
   const [syncIntervalIds, setSyncIntervalIds] = useState([]);
-  
-  const rtf = useMakeClassInstance(RelativeTimeFormat, ["en", {
+
+  const rtf = useMakeClassInstance(RelativeTimeFormat, [
+    "en",
+    {
       localeMatcher: "best fit", // other values: "lookup"
       numeric: "always", // other values: "always"
-      style: "long", // other values: "short" or "narrow"
-  }]);
+      style: "long" // other values: "short" or "narrow"
+    }
+  ]);
 
   useEffect(() => {
     if (syncInitially) {
@@ -68,7 +65,12 @@ const Sync = ({
       {syncEnabled && (
         <p>Warning: sync is enabled. This will cost money if left running.</p>
       )}
-      <p>Last sync: {typeof prevSyncTime == 'string' ? prevSyncTime : formatRelativeTime(rtf, prevSyncTime)}</p>
+      <p>
+        Last sync:{" "}
+        {typeof prevSyncTime == "string"
+          ? prevSyncTime
+          : formatRelativeTime(rtf, prevSyncTime)}
+      </p>
     </div>
   );
 };

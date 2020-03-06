@@ -1,13 +1,8 @@
-//      
+//
 
-import React, {                     useState } from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
-                          
-                     
-                           
-                      
-                   
-  
+
 const ProjectInput = ({
   className = "",
   namespace = "",
@@ -46,11 +41,11 @@ const ProjectInput = ({
   );
 };
 
-const ProjectInputStyled = (styled(ProjectInput)`
+const ProjectInputStyled = styled(ProjectInput)`
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   margin-top: 16px;
   background-color: #eeeeee;
-`                                  );
+`;
 export default ProjectInputStyled;

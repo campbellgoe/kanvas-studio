@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 function useOnScreen(
   ref,
-  { rootMargin = '0px', ...opts } = {},
+  { rootMargin = "0px", ...opts } = {},
   defaultIsIntersecting,
   onlyIsIntersecting
 ) {
@@ -16,7 +16,7 @@ function useOnScreen(
       },
       {
         rootMargin,
-        ...opts,
+        ...opts
       }
     );
     if (ref.current) {

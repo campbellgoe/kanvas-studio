@@ -1,11 +1,11 @@
-import { useState, useContext, useEffect } from 'react';
-import { ThemeContext } from 'styled-components';
-const mediaQueryBreakpoint = ({ size, type = 'min-width' }) => {
-  if (!size) throw new Error('Must specify a breakpoint value');
+import { useState, useContext, useEffect } from "react";
+import { ThemeContext } from "styled-components";
+const mediaQueryBreakpoint = ({ size, type = "min-width" }) => {
+  if (!size) throw new Error("Must specify a breakpoint value");
   return window.matchMedia(`only screen and (${type}: ${size})`);
 };
 const useBreakpoint = (
-  { size, type = 'min-width', defaultMatches = false },
+  { size, type = "min-width", defaultMatches = false },
   onChange = Function.prototype
 ) => {
   const { breakpoints: bps } = useContext(ThemeContext);

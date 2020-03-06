@@ -1,11 +1,10 @@
-//      
+//
 
 class Drawer {
-                                
-  constructor(ctx                          ) {
+  constructor(ctx) {
     this.ctx = ctx;
   }
-  line(xStart        , yStart        , xEnd        , yEnd        ) {
+  line(xStart, yStart, xEnd, yEnd) {
     const ctx = this.ctx;
     ctx.moveTo(xStart, yStart);
     ctx.lineTo(xEnd, yEnd);
@@ -14,7 +13,7 @@ class Drawer {
   //ex, ey = end x, y.
   //cellSize is distance between lines
   //grid will automatically fill the area given by sx,sy,ex,ey with gridlines of cellSize apart.
-  grid(sx        , sy        , ex        , ey        , cellSize        ) {
+  grid(sx, sy, ex, ey, cellSize) {
     const ctx = this.ctx;
     const width = ex - sx;
     const height = ey - sy;
@@ -32,14 +31,14 @@ class Drawer {
     ctx.stroke();
     ctx.closePath();
   }
-  circle(x        , y        , radius        ) {
+  circle(x, y, radius) {
     this.ctx.arc(x, y, radius, 0, Math.PI * 2);
   }
-  cross(x        , y        , size        ) {
+  cross(x, y, size) {
     this.line(x, y - size, x, y + size);
     this.line(x - size, y, x + size, y);
   }
-  polygon(...args               ) {
+  polygon(...args) {
     if (args.length % 2 === 1)
       throw new Error(
         "Odd number of arguments. Only accepts sets of 2 arguments each representing x, y coordinates."
@@ -55,7 +54,7 @@ class Drawer {
       ctx.lineTo(x, y);
     }
   }
-  supperfluousCrosshair(pointer     , size        ) {
+  supperfluousCrosshair(pointer, size) {
     const ctx = this.ctx;
     const draw = this;
     const { x, y, isDown } = pointer;

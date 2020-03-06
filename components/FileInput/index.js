@@ -1,15 +1,11 @@
-//      
+//
 
-import React, {                    } from "react";
+import React from "react";
 import styled from "styled-components";
 import { formats } from "../../config/mediaTypes";
 import parseFileForRendering from "../../utils/parseFileForRendering";
 import allSettledWithMetadata from "../../utils/allSettledWithMetadata";
-                       
-                     
-                       
-                    
-  
+
 async function processFiles(files) {
   const promises = [];
   for (let file of files) {
@@ -95,10 +91,10 @@ const FileInput = ({ className = "", showButton = true, onChange }) => {
   );
 };
 
-const FileInputStyled = (styled(FileInput)`
+const FileInputStyled = styled(FileInput)`
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   margin-top: 16px;
-`                               );
+`;
 export default FileInputStyled;
