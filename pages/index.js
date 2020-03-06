@@ -506,6 +506,16 @@ const Orchestrator = (styled(
         setLiveNamespaces(namespaces);
         setLoaded(loaded => ({ ...loaded, namespaces: true }));
       }, bypassS3);
+      setTimeout(()=>{
+        //say that it is loaded even if it didn't, but display a warning that namespaces couldn't be loaded
+        setLoaded(loaded => ({ ...loaded, namespaces: true }));
+        dispatch(
+          createNotification({
+            text: `Couldn't load namespaces.`,
+            type: "warn"
+          })
+        );
+      }, 8000);
 
       console.log("namespace:", namespace);
       getNearestObjects(namespace, { x: 0, y: 0, range: 99999 }, bypassS3).then(
