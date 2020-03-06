@@ -9,6 +9,7 @@ const initialState = {
   isDown: false,
   isMove: false,
   isDrag: false,
+  isDblClick: false,
   controlType: "left?",
   eventType: "mouse?",
   downControlType: "left?",

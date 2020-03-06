@@ -67,17 +67,28 @@ export const registerMouseAndTouchEventListeners = (
 ) => {
   let isDown = false;
   let isMove = false;
+  let isDblClick = false;
+  let successiveClicks = 0;
   let downControlType = null;
   let downPosition = {
     x: 0,
     y: 0
   };
+  let dblClickTimeout;
+  let resetDoubleClick = () => {
+    clearTimeout(dblClickTimeout);
+    dblClickTimeout = setTimeout(()=>{
+      successiveClicks = 0;
+      isDblClick = false;
+    }, 200);
+  }
   const onInput = e => {
     let {
       position: { x, y },
       eventType,
       controlType
     } = getInputXY(e, handleContextMenu);
+    isDblClick = false;
     if (
       e.type.endsWith("start") ||
       e.type.endsWith("down") ||
@@ -97,6 +108,12 @@ export const registerMouseAndTouchEventListeners = (
     } else if (e.type.endsWith("end") || e.type.endsWith("up")) {
       isDown = false;
       isMove = false;
+      resetDoubleClick();
+      successiveClicks ++;
+      if(successiveClicks === 2){
+        isDblClick = true;
+      }
+      console.log('successive clicks:', successiveClicks);
     } else if (e.type.endsWith("move")) {
       isMove = true;
     }
@@ -110,6 +127,7 @@ export const registerMouseAndTouchEventListeners = (
       isDown,
       isMove,
       isDrag,
+      isDblClick,
       controlType,
       eventType,
       downControlType,

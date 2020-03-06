@@ -597,7 +597,7 @@ const Orchestrator = (styled(
             // if(pointer.downControlType === 'right'){
             //   setPointerMenu({ x: pointer.x, y: pointer.y });
             // }
-            if (pointer.downControlType !== "right") {
+            if (!pointer.isDblClick) {
               setPointerMenu(null);
             }
           };
@@ -627,7 +627,8 @@ const Orchestrator = (styled(
           ) {
             const onUp = () => {
               //setPointerMenu({ x: pointer.x, y: pointer.y });
-              if (pointer.downControlType === "right") {
+              if (pointer.isDblClick) {
+                console.log('is dbl click');
                 const position = { x: pointer.x, y: pointer.y };
                 const offsetPosition = { x: pointer.x - ox, y: pointer.y - oy };
                 setPointerMenu({ position, offsetPosition });
