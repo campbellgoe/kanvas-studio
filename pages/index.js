@@ -502,20 +502,19 @@ const Orchestrator = (styled(
     const [prevSyncTime, setPrevSyncTime] = useState("Never");
     const onSync = useCallback(() => {
       //set namespaces listed in the S3 bucket
-      throttledListBucketFolders(namespaces => {
+      throttledListBucketFolders((err, namespaces) => {
         setLiveNamespaces(namespaces);
         setLoaded(loaded => ({ ...loaded, namespaces: true }));
+        if(err){
+          dispatch(
+            createNotification({
+              text: `Couldn't load namespaces.`,
+              type: "warn"
+            })
+          );
+        }
       }, bypassS3);
-      setTimeout(()=>{
-        //say that it is loaded even if it didn't, but display a warning that namespaces couldn't be loaded
-        setLoaded(loaded => ({ ...loaded, namespaces: true }));
-        dispatch(
-          createNotification({
-            text: `Couldn't load namespaces.`,
-            type: "warn"
-          })
-        );
-      }, 8000);
+      
 
       console.log("namespace:", namespace);
       getNearestObjects(namespace, { x: 0, y: 0, range: 99999 }, bypassS3).then(

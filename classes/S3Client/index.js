@@ -43,12 +43,13 @@ function listBucketFolders(cb, bypass = true) {
   if (bypass) return cb(dummyBucketFolders);
   s3.listObjects({ Delimiter: "/" }, function(err, data) {
     if (err) {
+      cb(err, ['']);
       return console.warn(
-        "There was an error listing your bucketFolders: " + err.message
+        "There was an error listing your bucketFolders:", err
       );
     } else {
       const bucketFolders = getBucketFolderNamesFromResponse(data);
-      cb(bucketFolders);
+      cb(err, bucketFolders);
     }
   });
 }
